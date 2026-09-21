@@ -97,19 +97,40 @@ func TestSelectedObjectHasBackground(t *testing.T) {
 	}
 	app.draw()
 
-	hasBackground := func(screenRow int) bool {
+	hasBackground := func(screenRow int, expected tcell.Color) bool {
 		_, style, _ := screen.Get(10, screenRow)
 		_, background, _ := style.Decompose()
-		return background == selectedBackgroundColor
+		return background == expected
 	}
 	// The cursor is on line 4 (the "{" of manifests[0]). The object spans lines 4-8, shown at rows 5-9 on screen because of the one-line header.
-	for screenRow := 5; screenRow <= 9; screenRow++ {
-		if !hasBackground(screenRow) {
+	// The cursor line (row 5) has the cursor background; the other lines of the object have the selected background.
+	if !hasBackground(5, cursorBackgroundColor) {
+		t.Error("the cursor line must have the cursor background")
+	}
+	for screenRow := 6; screenRow <= 9; screenRow++ {
+		if !hasBackground(screenRow, selectedBackgroundColor) {
 			t.Errorf("screen row %d must have the selected background", screenRow)
 		}
 	}
-	if hasBackground(3) || hasBackground(10) {
-		t.Error("rows outside the selected object must not have the selected background")
+	for _, screenRow := range []int{3, 10} {
+		if hasBackground(screenRow, selectedBackgroundColor) || hasBackground(screenRow, cursorBackgroundColor) {
+			t.Errorf("screen row %d is outside the selected object and must have no highlight", screenRow)
+		}
+	}
+}
+
+func TestCursorLineIsHighlightedEvenWithoutSelectableObject(t *testing.T) {
+	app, screen, _ := newTestApp(t)
+	app.draw()
+
+	// The cursor is on line 0 (the root "{"), which is not inside a selectable object.
+	_, style, _ := screen.Get(10, 1)
+	_, background, _ := style.Decompose()
+	if background != cursorBackgroundColor {
+		t.Errorf("background = %v, want the cursor background", background)
+	}
+	if text, _, _ := screen.Get(0, 1); text == ">" {
+		t.Error("the \">\" cursor marker must not be drawn")
 	}
 }
 

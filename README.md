@@ -7,7 +7,8 @@ You can interactively walk from an image index → manifest → config / layer /
 ## Features
 
 - Shows pretty-printed, colorized JSON line by line
-- Highlights (with a subtle background color) the innermost object under the cursor that has both `mediaType` and `digest`
+- Highlights the whole cursor line with a background color, like a row selection in a list
+- Highlights (with a subtler background color) the innermost object under the cursor that has both `mediaType` and `digest`
 - Opens the selected object on a new screen (nestable), or downloads it to the current directory
 - Supports both arrow keys and Emacs key bindings
 - Uses Docker's configuration (`~/.docker/config.json`, etc.) through [regclient](https://github.com/regclient/regclient), so existing authentication and certificate settings just work
@@ -49,7 +50,7 @@ If `<image-ref>` is missing or more than one is given, waybill prints the error 
 ### Basic flow
 
 1. On startup, the image manifest is shown as JSON.
-2. As you move the cursor, the innermost object that has `mediaType` and `digest` is highlighted.
+2. As you move the cursor, the cursor line is highlighted, and the innermost object that has `mediaType` and `digest` is highlighted.
 3. Press `Enter` to open a popup for choosing an action (View / Download). Press `Enter` again to run it.
 4. Choosing "View" opens the fetched JSON on a new screen. Press `Esc` / `q` to go back.
 5. Choosing "Download" saves the content to the current directory and shows the saved path in the status line.
