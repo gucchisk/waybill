@@ -7,8 +7,6 @@ import (
 	"github.com/gucchisk/waybill/internal/adapter/jsonview"
 )
 
-const cursorGutterWidth = 2
-
 // Colors: use only the ANSI palette colors 0-15 so that the TUI follows the terminal's color scheme
 // (e.g. the iTerm2 profile). Colors 16-255 and RGB colors are fixed and do not follow it.
 //
@@ -27,6 +25,9 @@ const cursorGutterWidth = 2
 // selectedBackgroundColor is the subtle background of the selected object (Bright Black).
 // With some color schemes (e.g. Solarized) Bright Black blends into the background; use tcell.ColorBlack then.
 const selectedBackgroundColor = tcell.ColorGray
+
+// cursorBackgroundColor is the background of the whole cursor line (Blue). It is stronger than selectedBackgroundColor.
+const cursorBackgroundColor = tcell.ColorNavy
 
 const helpText = "↑↓/C-p C-n:move  PgUp PgDn/M-v C-v:page  Enter:select action  Esc/q:back  C-c:quit"
 
@@ -80,24 +81,28 @@ func (app *App) drawBody(view *contentView, width int) {
 			return
 		}
 		screenRow := row + 1
+		isCursorLine := lineNumber == view.cursorLine
 		isSelected := hasSelectedObject && lineNumber >= selectedObject.StartLine && lineNumber <= selectedObject.EndLine
 
-		if isSelected {
-			app.fillRow(screenRow, width, tcell.StyleDefault.Background(selectedBackgroundColor))
+		hasBackground := true
+		var background tcell.Color
+		switch {
+		case isCursorLine:
+			background = cursorBackgroundColor
+		case isSelected:
+			background = selectedBackgroundColor
+		default:
+			hasBackground = false
 		}
-		if lineNumber == view.cursorLine {
-			cursorStyle := tcell.StyleDefault.Bold(true)
-			if isSelected {
-				cursorStyle = cursorStyle.Background(selectedBackgroundColor)
-			}
-			app.drawText(0, screenRow, ">", cursorStyle, width)
+		if hasBackground {
+			app.fillRow(screenRow, width, tcell.StyleDefault.Background(background))
 		}
 
-		x := cursorGutterWidth
+		x := 0
 		for _, span := range view.document.Lines[lineNumber].Spans {
 			style := spanStyles[span.Kind]
-			if isSelected {
-				style = style.Background(selectedBackgroundColor)
+			if hasBackground {
+				style = style.Background(background)
 			}
 			x = app.drawText(x, screenRow, span.Text, style, width)
 		}
