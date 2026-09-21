@@ -174,7 +174,7 @@ func (app *App) handlePopupCommand(keyCommand command) {
 // execute runs an operation that involves network access in the background and applies the result on the event loop.
 func (app *App) execute(descriptor domain.Descriptor, action domain.Action) {
 	app.isBusy = true
-	app.statusMessage = fmt.Sprintf("%s... (%s)", action.Label(), descriptor.Digest)
+	app.statusMessage = fmt.Sprintf("%s... (%s)", action.ProgressLabel(), descriptor.Digest)
 
 	go func() {
 		applyResult := app.runAction(descriptor, action)
