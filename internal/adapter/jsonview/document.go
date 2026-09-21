@@ -1,5 +1,5 @@
-// Package jsonview はJSONを人間に見やすい行単位の表示モデルへ変換する。
-// キー順は元のJSONのまま保持し、mediaType と digest を持つオブジェクトを選択対象として検出する。
+// Package jsonview converts JSON into a human-readable, line-based display model.
+// It keeps the key order of the original JSON and detects objects that have both mediaType and digest as selectable.
 package jsonview
 
 import (
@@ -16,7 +16,7 @@ import (
 
 const indentUnit = "  "
 
-// SpanKind は色分けのための文字列の種別。
+// SpanKind is the kind of a text span, used for coloring.
 type SpanKind int
 
 const (
@@ -32,13 +32,13 @@ type Span struct {
 	Kind SpanKind
 }
 
-// Line は表示1行分。SelectableIndex は行が属する最内の選択可能オブジェクトの番号(なければ -1)。
+// Line is one displayed line. SelectableIndex is the index of the innermost selectable object the line belongs to (-1 if none).
 type Line struct {
 	Spans           []Span
 	SelectableIndex int
 }
 
-// SelectableObject は mediaType と digest を持つオブジェクト。行範囲は両端を含む。
+// SelectableObject is an object that has mediaType and digest. The line range is inclusive on both ends.
 type SelectableObject struct {
 	Descriptor domain.Descriptor
 	StartLine  int
@@ -50,7 +50,7 @@ type Document struct {
 	SelectableObjects []SelectableObject
 }
 
-// SelectableObjectAt は line 行目が属する最内の選択可能オブジェクトを返す。
+// SelectableObjectAt returns the innermost selectable object that line belongs to.
 func (document *Document) SelectableObjectAt(line int) (SelectableObject, bool) {
 	if line < 0 || line >= len(document.Lines) {
 		return SelectableObject{}, false
@@ -62,7 +62,7 @@ func (document *Document) SelectableObjectAt(line int) (SelectableObject, bool) 
 	return document.SelectableObjects[index], true
 }
 
-// Parse は raw JSON を整形して Document にする。
+// Parse formats raw JSON into a Document.
 func Parse(raw []byte) (*Document, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
@@ -87,9 +87,9 @@ const (
 
 type node struct {
 	kind        nodeKind
-	scalarText  string // JSON表現(文字列は引用符付き)
+	scalarText  string // JSON representation (strings are quoted)
 	scalarKind  SpanKind
-	stringValue string // scalarKind が SpanString のときの引用符なしの値
+	stringValue string // unquoted value when scalarKind is SpanString
 	members     []member
 	items       []*node
 }
@@ -172,7 +172,7 @@ type documentBuilder struct {
 	document Document
 }
 
-// render は node を lines へ追加する。linePrefix は最初の行の先頭に付くインデントとキー。
+// render appends node to lines. linePrefix is the indentation and key placed at the start of the first line.
 func (builder *documentBuilder) render(target *node, linePrefix []Span, depth int, hasNextSibling bool) {
 	comma := ""
 	if hasNextSibling {
@@ -227,7 +227,7 @@ func (builder *documentBuilder) appendLine(linePrefix []Span, rest ...Span) {
 	builder.document.Lines = append(builder.document.Lines, Line{Spans: spans, SelectableIndex: -1})
 }
 
-// registerIfSelectable は mediaType と digest が文字列で存在するオブジェクトを選択対象として登録する。
+// registerIfSelectable registers an object as selectable if it has string mediaType and digest.
 func (builder *documentBuilder) registerIfSelectable(object *node, startLine, endLine int) {
 	var mediaType, digestValue string
 	var size int64
@@ -255,8 +255,8 @@ func (builder *documentBuilder) registerIfSelectable(object *node, startLine, en
 	})
 }
 
-// assignSelectableIndexes は各行に最内の選択可能オブジェクトを割り当てる。
-// 範囲の広い順に塗ることで、入れ子の内側が外側を上書きする。
+// assignSelectableIndexes assigns the innermost selectable object to each line.
+// Painting from the widest range first lets inner objects overwrite outer ones.
 func (builder *documentBuilder) assignSelectableIndexes() {
 	objects := builder.document.SelectableObjects
 	paintOrder := make([]int, len(objects))

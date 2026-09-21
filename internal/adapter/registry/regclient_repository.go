@@ -14,12 +14,12 @@ import (
 	"github.com/gucchisk/waybill/internal/domain"
 )
 
-// RegclientRepository は regclient を使って registry からコンテンツを取得する。
+// RegclientRepository fetches content from a registry using regclient.
 type RegclientRepository struct {
 	client *regclient.RegClient
 }
 
-// NewRegclientRepository は Docker の認証情報・証明書設定を利用するクライアントを作る。
+// NewRegclientRepository creates a client that uses Docker's credential and certificate settings.
 func NewRegclientRepository() *RegclientRepository {
 	return &RegclientRepository{
 		client: regclient.New(regclient.WithDockerCreds(), regclient.WithDockerCerts()),
@@ -73,7 +73,7 @@ func (repository *RegclientRepository) FetchContent(ctx context.Context, reposit
 	return blob, nil
 }
 
-// repositoryName は tag/digest を除いた "registry/path" を返す。
+// repositoryName returns "registry/path" without the tag or digest.
 func repositoryName(imageRef ref.Ref) string {
 	return imageRef.Registry + "/" + imageRef.Repository
 }

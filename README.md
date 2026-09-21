@@ -1,26 +1,26 @@
 # waybill
 
-コンテナイメージの manifest をターミナル上で閲覧・辿り・ダウンロードできる CLI ツールです。
+A CLI tool for browsing, following and downloading container image manifests in the terminal.
 
-image index → manifest → config / layer / attestation(in-toto, cosign, sigstore bundle など)と、JSON 内の `digest` 参照を対話的に辿れます。
+You can interactively walk from an image index → manifest → config / layer / attestation (in-toto, cosign, sigstore bundle, etc.) by following the `digest` references inside the JSON.
 
-## 特長
+## Features
 
-- 整形・色分けされた JSON を行単位で表示
-- カーソル位置の `mediaType` + `digest` を持つ object を反転表示
-- 選択した object を新しい画面で表示(入れ子で辿れる)、またはカレントディレクトリへダウンロード
-- 矢印キーと Emacs バインドの両方で操作可能
-- Docker の設定(`~/.docker/config.json` 等)を [regclient](https://github.com/regclient/regclient) 経由で利用するため、認証・証明書設定はそのまま使える
+- Shows pretty-printed, colorized JSON line by line
+- Highlights (reverses) the innermost object under the cursor that has both `mediaType` and `digest`
+- Opens the selected object on a new screen (nestable), or downloads it to the current directory
+- Supports both arrow keys and Emacs key bindings
+- Uses Docker's configuration (`~/.docker/config.json`, etc.) through [regclient](https://github.com/regclient/regclient), so existing authentication and certificate settings just work
 
-## インストール
+## Installation
 
-Go 1.27.1 以上が必要です。
+Go 1.27.1 or later is required.
 
 ```sh
 go install github.com/gucchisk/waybill/cmd/waybill@latest
 ```
 
-ソースからビルドする場合:
+To build from source:
 
 ```sh
 git clone https://github.com/gucchisk/waybill.git
@@ -28,89 +28,92 @@ cd waybill
 go build -o waybill ./cmd/waybill
 ```
 
-## 使い方
+## Usage
 
 ```sh
 waybill <image-ref>
 ```
 
-例:
+Example:
 
 ```sh
 waybill ghcr.io/regclient/regctl:latest
 ```
 
-| オプション | 説明 |
+| Option | Description |
 | --- | --- |
-| `-h`, `--help` | 使い方を表示 |
+| `-h`, `--help` | Show usage |
 
-### 基本的な流れ
+If `<image-ref>` is missing or more than one is given, waybill prints the error message and the usage, then exits with status 1.
 
-1. 起動するとイメージの manifest が JSON で表示されます。
-2. カーソルを動かすと、`mediaType` と `digest` を持つ最内の object が反転表示されます。
-3. `Enter` で操作(表示 / ダウンロード)を選ぶ popup が開きます。もう一度 `Enter` で実行します。
-4. 「表示」を選ぶと取得した JSON が新しい画面で開きます。`Esc` / `q` で前の画面に戻ります。
-5. 「ダウンロード」を選ぶとカレントディレクトリに保存され、保存先パスがステータス行に表示されます。
+### Basic flow
 
-`digest` を持たない object(ルートの manifest など)は取得先を特定できないため、選択対象外です。
+1. On startup, the image manifest is shown as JSON.
+2. As you move the cursor, the innermost object that has `mediaType` and `digest` is highlighted.
+3. Press `Enter` to open a popup for choosing an action (View / Download). Press `Enter` again to run it.
+4. Choosing "View" opens the fetched JSON on a new screen. Press `Esc` / `q` to go back.
+5. Choosing "Download" saves the content to the current directory and shows the saved path in the status line.
 
-## キーバインド
+Objects without a `digest` (such as the root manifest) cannot be selected because there is no way to tell where to fetch them from.
 
-| 操作 | キー |
+## Key bindings
+
+| Action | Keys |
 | --- | --- |
-| 上へ / 下へ | `↑` / `↓`、`Ctrl-p` / `Ctrl-n` |
-| ページ上 / ページ下 | `PgUp` / `PgDn`、`Alt-v` / `Ctrl-v` |
-| 先頭 / 末尾 | `Home` / `End`、`Alt-<` / `Alt->` |
-| popup 表示 / 実行 | `Enter` |
-| popup を閉じる / 前の画面へ戻る | `Esc`、`Ctrl-g`、`q` |
-| 終了 | `Ctrl-c`(最初の画面では `Esc` / `q` でも終了) |
+| Up / Down | `↑` / `↓`, `Ctrl-p` / `Ctrl-n` |
+| Page up / Page down | `PgUp` / `PgDn`, `Alt-v` / `Ctrl-v` |
+| Top / Bottom | `Home` / `End`, `Alt-<` / `Alt->` |
+| Show popup / Run | `Enter` |
+| Close popup / Go back | `Esc`, `Ctrl-g`, `q` |
+| Quit | `Ctrl-c` (`Esc` / `q` also quit on the first screen) |
 
-取得・ダウンロード中は `Ctrl-c` 以外のキー操作を受け付けません。
+While fetching or downloading, all keys except `Ctrl-c` are ignored.
 
-## ダウンロード
+## Download
 
-- 保存先: カレントディレクトリ
-- ファイル名: digest の `:` を `-` に置換したものに拡張子を付与(例: `sha256-xxxx.tar.gz`)
-    - layer: `.tar.gz` / `.tar` / `.tar.zst`
-    - その他の `+json`: `.json`
-    - 上記以外: `.bin`
+- Destination: the current directory
+- File name: the digest with `:` replaced by `-`, plus an extension (e.g. `sha256-xxxx.tar.gz`)
+    - Layers: `.tar.gz` / `.tar` / `.tar.zst`
+    - Other `+json` types: `.json`
+    - Everything else: `.bin`
 
-## mediaType ごとの操作
+## Actions per mediaType
 
-| mediaType | 操作 |
+| mediaType | Actions |
 | --- | --- |
-| `application/vnd.oci.image.index.v1+json` | 表示、ダウンロード |
-| `application/vnd.oci.image.manifest.v1+json` | 表示、ダウンロード |
-| `application/vnd.oci.image.config.v1+json` | 表示、ダウンロード |
-| `application/vnd.oci.image.layer.v1.tar+gzip` | ダウンロード |
-| `application/vnd.oci.image.layer.v1.tar` | ダウンロード |
-| `application/vnd.oci.image.layer.v1.tar+zstd` | ダウンロード |
-| `application/vnd.oci.empty.v1+json` | 表示 |
-| `application/vnd.docker.distribution.manifest.v2+json` | 表示、ダウンロード |
-| `application/vnd.docker.distribution.manifest.list.v2+json` | 表示、ダウンロード |
-| `application/vnd.docker.container.image.v1+json` | 表示、ダウンロード |
-| `application/vnd.docker.image.rootfs.diff.tar.gzip` | ダウンロード |
-| `application/vnd.in-toto+json` | 表示、ダウンロード |
-| `application/vnd.dsse.envelope.v1+json` | 表示、ダウンロード |
-| `application/vnd.dev.sigstore.bundle.v0.3+json` | 表示、ダウンロード |
-| `application/vnd.dev.cosign.simplesigning.v1+json` | 表示、ダウンロード |
-| 未知の `+json` で終わる mediaType | 表示、ダウンロード |
-| 未知のその他の mediaType | ダウンロード |
+| `application/vnd.oci.image.index.v1+json` | View, Download |
+| `application/vnd.oci.image.manifest.v1+json` | View, Download |
+| `application/vnd.oci.image.config.v1+json` | View, Download |
+| `application/vnd.oci.image.layer.v1.tar+gzip` | Download |
+| `application/vnd.oci.image.layer.v1.tar` | Download |
+| `application/vnd.oci.image.layer.v1.tar+zstd` | Download |
+| `application/vnd.oci.empty.v1+json` | View |
+| `application/vnd.docker.distribution.manifest.v2+json` | View, Download |
+| `application/vnd.docker.distribution.manifest.list.v2+json` | View, Download |
+| `application/vnd.docker.container.image.v1+json` | View, Download |
+| `application/vnd.docker.image.rootfs.diff.tar.gzip` | Download |
+| `application/vnd.in-toto+json` | View, Download |
+| `application/vnd.dsse.envelope.v1+json` | View, Download |
+| `application/vnd.dev.sigstore.bundle.v0.3+json` | View, Download |
+| `application/vnd.dev.cosign.simplesigning.v1+json` | View, Download |
+| Unknown mediaType ending with `+json` | View, Download |
+| Any other unknown mediaType | Download |
 
-## 制限事項
+## Limitations
 
-- 画面に表示できる JSON のサイズは最大 32MiB です。
+- The maximum size of JSON that can be shown on screen is 32MiB.
 
-## 開発
+## Development
 
 - Go 1.27.1
-- [regclient](https://github.com/regclient/regclient)(レジストリアクセス)
-- [tcell](https://github.com/gdamore/tcell)(TUI)
-- クリーンアーキテクチャ(`internal/domain` / `usecase` / `adapter` / `infrastructure`)
+- [cobra](https://github.com/spf13/cobra) (CLI commands, arguments and flags)
+- [regclient](https://github.com/regclient/regclient) (registry access)
+- [tcell](https://github.com/gdamore/tcell) (TUI)
+- Clean architecture (`internal/domain` / `usecase` / `adapter` / `infrastructure`)
 
 ```sh
 go build ./...
 go test ./...
 ```
 
-仕様の詳細は [SPEC.md](SPEC.md) を参照してください。
+See [SPEC.md](SPEC.md) for the detailed specification (written in Japanese).

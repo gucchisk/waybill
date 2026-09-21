@@ -17,7 +17,7 @@ const (
 	commandQuit
 )
 
-// commandFor はキー入力を操作へ変換する。矢印キーとEmacsバインドの両方に対応する。
+// commandFor converts a key input into a command. Both arrow keys and Emacs bindings are supported.
 func commandFor(event *tcell.EventKey) command {
 	switch event.Key() {
 	case tcell.KeyUp, tcell.KeyCtrlP:

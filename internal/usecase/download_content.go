@@ -6,7 +6,7 @@ import (
 	"github.com/gucchisk/waybill/internal/domain"
 )
 
-// DownloadContent はコンテンツをストリームのままファイルへ保存する。
+// DownloadContent saves content to a file as a stream.
 type DownloadContent struct {
 	fetcher ContentFetcher
 	saver   FileSaver
@@ -16,7 +16,7 @@ func NewDownloadContent(fetcher ContentFetcher, saver FileSaver) *DownloadConten
 	return &DownloadContent{fetcher: fetcher, saver: saver}
 }
 
-// Execute は保存先パスを返す。
+// Execute returns the path the content was saved to.
 func (useCase *DownloadContent) Execute(ctx context.Context, repository string, descriptor domain.Descriptor) (string, error) {
 	content, err := useCase.fetcher.FetchContent(ctx, repository, descriptor)
 	if err != nil {

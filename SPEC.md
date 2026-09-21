@@ -13,10 +13,13 @@
 ## 起動方法
 
 - `waybill <image-ref>`(例: `waybill ghcr.io/regclient/regctl:latest`)
+- 引数が`<image-ref>`ひとつ以外の場合はエラーメッセージと使い方(usage)を表示して異常終了する(終了コード1)
+- `-h` / `--help`で使い方を表示する
 - 認証・証明書はDockerの設定(`~/.docker/config.json`等)をregclient経由で利用する
 
 ## 画面
 
+- 画面上のメッセージ・ラベル(操作名は`View` / `Download`、ヘルプ、ステータス行など)およびCLIのエラーメッセージは英語で表示する
 - 整形したJSONを行単位で表示する(キー・文字列・数値などは色分け)
 - カーソル行が属する、`mediaType`と`digest`を持つ最内のobjectを反転表示する
     - `digest`を持たないobject(ルートのmanifest等)は取得先を特定できないため選択対象外
@@ -69,6 +72,7 @@ mediaTypeによる挙動は以下のテーブルに集約する。
 ## development
 
 - go v1.27.1
+- [cobra](https://github.com/spf13/cobra)(CLIのコマンド・引数・フラグ処理)
 - [regclient](https://github.com/regclient/regclient)
 - [tcell](https://github.com/gdamore/tcell)
 - クリーンアーキテクチャ
