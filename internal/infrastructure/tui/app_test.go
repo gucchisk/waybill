@@ -90,26 +90,26 @@ func TestEnterOnlyOpensPopupOnSelectableObject(t *testing.T) {
 	}
 }
 
-func TestSelectedObjectIsReversed(t *testing.T) {
+func TestSelectedObjectHasBackground(t *testing.T) {
 	app, screen, _ := newTestApp(t)
 	for range 4 {
 		app.handleKey(keyPress(tcell.KeyDown))
 	}
 	app.draw()
 
-	isReversed := func(screenRow int) bool {
+	hasBackground := func(screenRow int) bool {
 		_, style, _ := screen.Get(10, screenRow)
-		_, _, attributes := style.Decompose()
-		return attributes&tcell.AttrReverse != 0
+		_, background, _ := style.Decompose()
+		return background == selectedBackgroundColor
 	}
 	// The cursor is on line 4 (the "{" of manifests[0]). The object spans lines 4-8, shown at rows 5-9 on screen because of the one-line header.
 	for screenRow := 5; screenRow <= 9; screenRow++ {
-		if !isReversed(screenRow) {
-			t.Errorf("screen row %d must be reversed", screenRow)
+		if !hasBackground(screenRow) {
+			t.Errorf("screen row %d must have the selected background", screenRow)
 		}
 	}
-	if isReversed(3) || isReversed(10) {
-		t.Error("rows outside the selected object must not be reversed")
+	if hasBackground(3) || hasBackground(10) {
+		t.Error("rows outside the selected object must not have the selected background")
 	}
 }
 

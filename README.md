@@ -7,7 +7,7 @@ You can interactively walk from an image index → manifest → config / layer /
 ## Features
 
 - Shows pretty-printed, colorized JSON line by line
-- Highlights (reverses) the innermost object under the cursor that has both `mediaType` and `digest`
+- Highlights (with a subtle background color) the innermost object under the cursor that has both `mediaType` and `digest`
 - Opens the selected object on a new screen (nestable), or downloads it to the current directory
 - Supports both arrow keys and Emacs key bindings
 - Uses Docker's configuration (`~/.docker/config.json`, etc.) through [regclient](https://github.com/regclient/regclient), so existing authentication and certificate settings just work

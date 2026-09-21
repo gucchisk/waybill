@@ -9,6 +9,25 @@ import (
 
 const cursorGutterWidth = 2
 
+// Colors: use only the ANSI palette colors 0-15 so that the TUI follows the terminal's color scheme
+// (e.g. the iTerm2 profile). Colors 16-255 and RGB colors are fixed and do not follow it.
+//
+// tcell's named colors come from HTML/CSS, so they differ from the ANSI names.
+// For example, tcell.ColorRed is Bright Red (9), not Red (1). There are no constants such as tcell.Color8.
+//
+//	 0 Black          tcell.ColorBlack     8 Bright Black    tcell.ColorGray
+//	 1 Red            tcell.ColorMaroon    9 Bright Red      tcell.ColorRed
+//	 2 Green          tcell.ColorGreen    10 Bright Green    tcell.ColorLime
+//	 3 Yellow         tcell.ColorOlive    11 Bright Yellow   tcell.ColorYellow
+//	 4 Blue           tcell.ColorNavy     12 Bright Blue     tcell.ColorBlue
+//	 5 Magenta        tcell.ColorPurple   13 Bright Magenta  tcell.ColorFuchsia
+//	 6 Cyan           tcell.ColorTeal     14 Bright Cyan     tcell.ColorAqua
+//	 7 White          tcell.ColorSilver   15 Bright White    tcell.ColorWhite
+
+// selectedBackgroundColor is the subtle background of the selected object (Bright Black).
+// With some color schemes (e.g. Solarized) Bright Black blends into the background; use tcell.ColorBlack then.
+const selectedBackgroundColor = tcell.ColorGray
+
 const helpText = "↑↓/C-p C-n:move  PgUp PgDn/M-v C-v:page  Enter:select action  Esc/q:back  C-c:quit"
 
 var spanStyles = map[jsonview.SpanKind]tcell.Style{
@@ -64,17 +83,21 @@ func (app *App) drawBody(view *contentView, width int) {
 		isSelected := hasSelectedObject && lineNumber >= selectedObject.StartLine && lineNumber <= selectedObject.EndLine
 
 		if isSelected {
-			app.fillRow(screenRow, width, tcell.StyleDefault.Reverse(true))
+			app.fillRow(screenRow, width, tcell.StyleDefault.Background(selectedBackgroundColor))
 		}
 		if lineNumber == view.cursorLine {
-			app.drawText(0, screenRow, ">", tcell.StyleDefault.Bold(true).Reverse(isSelected), width)
+			cursorStyle := tcell.StyleDefault.Bold(true)
+			if isSelected {
+				cursorStyle = cursorStyle.Background(selectedBackgroundColor)
+			}
+			app.drawText(0, screenRow, ">", cursorStyle, width)
 		}
 
 		x := cursorGutterWidth
 		for _, span := range view.document.Lines[lineNumber].Spans {
 			style := spanStyles[span.Kind]
 			if isSelected {
-				style = style.Reverse(true)
+				style = style.Background(selectedBackgroundColor)
 			}
 			x = app.drawText(x, screenRow, span.Text, style, width)
 		}
