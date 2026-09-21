@@ -1,4 +1,4 @@
-// waybill はコンテナイメージの manifest を閲覧・ダウンロードする CLI。
+// waybill is a CLI for browsing and downloading container image manifests.
 package main
 
 import (
@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/spf13/cobra"
+
 	"github.com/gucchisk/waybill/internal/adapter/filesystem"
 	"github.com/gucchisk/waybill/internal/adapter/registry"
 	"github.com/gucchisk/waybill/internal/infrastructure/tui"
@@ -14,19 +16,36 @@ import (
 )
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "waybill:", err)
+	rootCommand, runError := newRootCommand()
+	if err := rootCommand.Execute(); err != nil {
+		os.Exit(1)
+	}
+	if *runError != nil {
+		fmt.Fprintln(os.Stderr, "waybill:", *runError)
 		os.Exit(1)
 	}
 }
 
-func run(arguments []string) error {
-	if len(arguments) != 1 || arguments[0] == "-h" || arguments[0] == "--help" {
-		return fmt.Errorf("usage: waybill <image-reference>  (e.g. waybill ghcr.io/regclient/regctl:latest)")
+// newRootCommand returns the root command and the destination for runtime errors.
+// Returning a runtime error from RunE makes cobra print the usage, so it is handed to main through this destination.
+func newRootCommand() (*cobra.Command, *error) {
+	var runError error
+	rootCommand := &cobra.Command{
+		Use:     "waybill <image-ref>",
+		Short:   "Browse and download container image manifests",
+		Long:    "Show a container image manifest as JSON, follow the objects it references, and download their contents.",
+		Example: "  waybill ghcr.io/regclient/regctl:latest",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, arguments []string) error {
+			runError = run(command.Context(), arguments[0])
+			return nil
+		},
 	}
-	imageReference := arguments[0]
+	return rootCommand, &runError
+}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+func run(parentCtx context.Context, imageReference string) error {
+	ctx, stop := signal.NotifyContext(parentCtx, os.Interrupt)
 	defer stop()
 
 	workingDirectory, err := os.Getwd()

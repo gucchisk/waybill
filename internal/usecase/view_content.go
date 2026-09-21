@@ -8,10 +8,10 @@ import (
 	"github.com/gucchisk/waybill/internal/domain"
 )
 
-// maxViewableContentBytes は表示用に読み込むコンテンツの上限。
+// maxViewableContentBytes is the upper limit of content read for display.
 const maxViewableContentBytes = 32 << 20
 
-// ViewContent は表示用にコンテンツ全体を取得する。
+// ViewContent fetches the whole content for display.
 type ViewContent struct {
 	fetcher ContentFetcher
 }

@@ -9,7 +9,7 @@ import (
 
 const cursorGutterWidth = 2
 
-const helpText = "↑↓/C-p C-n:移動  PgUp PgDn/M-v C-v:ページ  Enter:操作を選択  Esc/q:戻る  C-c:終了"
+const helpText = "↑↓/C-p C-n:move  PgUp PgDn/M-v C-v:page  Enter:select action  Esc/q:back  C-c:quit"
 
 var spanStyles = map[jsonview.SpanKind]tcell.Style{
 	jsonview.SpanPunctuation: tcell.StyleDefault,
@@ -19,7 +19,7 @@ var spanStyles = map[jsonview.SpanKind]tcell.Style{
 	jsonview.SpanLiteral:     tcell.StyleDefault.Foreground(tcell.ColorPurple),
 }
 
-// bodyHeight はヘッダとフッタを除いたJSON表示領域の行数。
+// bodyHeight is the number of rows in the JSON area, excluding the header and footer.
 func (app *App) bodyHeight() int {
 	_, height := app.screen.Size()
 	return max(height-2, 1)
@@ -143,7 +143,7 @@ func (app *App) fillRow(row, width int, style tcell.Style) {
 	}
 }
 
-// drawText は limitX(含まない)までテキストを描き、次の描画位置を返す。全角文字の幅も考慮する。
+// drawText draws text up to limitX (exclusive) and returns the next draw position. It accounts for the width of full-width characters.
 func (app *App) drawText(x, y int, text string, style tcell.Style, limitX int) int {
 	for text != "" && x < limitX {
 		remaining, cellWidth := app.screen.Put(x, y, text, style)

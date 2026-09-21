@@ -6,7 +6,7 @@ import (
 	"github.com/gucchisk/waybill/internal/domain"
 )
 
-// OpenImage はイメージ参照からルートdescriptorを解決する。
+// OpenImage resolves the root descriptor from an image reference.
 type OpenImage struct {
 	resolver ImageResolver
 }

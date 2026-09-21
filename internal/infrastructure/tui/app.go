@@ -1,4 +1,4 @@
-// Package tui は tcell を使った端末UIを提供する。
+// Package tui provides a terminal UI built on tcell.
 package tui
 
 import (
@@ -17,7 +17,7 @@ type Dependencies struct {
 	DownloadContent *usecase.DownloadContent
 }
 
-// contentView は表示中の1つのJSON画面。
+// contentView is one JSON screen being displayed.
 type contentView struct {
 	title      string
 	document   *jsonview.Document
@@ -25,7 +25,7 @@ type contentView struct {
 	topLine    int
 }
 
-// actionPopup は mediaType を持つオブジェクトに対する操作の選択肢。
+// actionPopup holds the actions available for an object that has a mediaType.
 type actionPopup struct {
 	object   jsonview.SelectableObject
 	actions  []domain.Action
@@ -65,7 +65,7 @@ func newContentView(descriptor domain.Descriptor, content []byte) (*contentView,
 	}, nil
 }
 
-// Run は終了操作が行われるまでイベントループを回す。
+// Run runs the event loop until a quit operation is performed.
 func (app *App) Run() {
 	for {
 		app.draw()
@@ -86,7 +86,7 @@ func (app *App) Run() {
 	}
 }
 
-// handleKey はキー入力を処理し、アプリを終了すべきなら true を返す。
+// handleKey handles a key input and returns true if the app should quit.
 func (app *App) handleKey(event *tcell.EventKey) (shouldQuit bool) {
 	keyCommand := commandFor(event)
 	if keyCommand == commandQuit {
@@ -148,6 +148,10 @@ func (app *App) openPopup() {
 	app.popup = &actionPopup{object: object, actions: actions}
 }
 
+func (app *App) closePopup() {
+	app.popup = nil
+}
+
 func (app *App) handlePopupCommand(keyCommand command) {
 	popup := app.popup
 	switch keyCommand {
@@ -160,17 +164,17 @@ func (app *App) handlePopupCommand(keyCommand command) {
 	case commandBottom, commandPageDown:
 		popup.selected = len(popup.actions) - 1
 	case commandBack:
-		app.popup = nil
+		app.closePopup()
 	case commandConfirm:
-		app.popup = nil
+		app.closePopup()
 		app.execute(popup.object.Descriptor, popup.actions[popup.selected])
 	}
 }
 
-// execute は通信を伴う操作をバックグラウンドで実行し、結果はイベントループ上で反映する。
+// execute runs an operation that involves network access in the background and applies the result on the event loop.
 func (app *App) execute(descriptor domain.Descriptor, action domain.Action) {
 	app.isBusy = true
-	app.statusMessage = fmt.Sprintf("%s中... (%s)", action.Label(), descriptor.Digest)
+	app.statusMessage = fmt.Sprintf("%s... (%s)", action.Label(), descriptor.Digest)
 
 	go func() {
 		applyResult := app.runAction(descriptor, action)
@@ -178,12 +182,12 @@ func (app *App) execute(descriptor domain.Descriptor, action domain.Action) {
 	}()
 }
 
-// runAction は状態を触らずに処理だけを行い、結果を反映する関数を返す。
+// runAction only performs the work without touching state, and returns a function that applies the result.
 func (app *App) runAction(descriptor domain.Descriptor, action domain.Action) func() {
 	fail := func(err error) func() {
 		return func() {
 			app.isBusy = false
-			app.statusMessage = "エラー: " + err.Error()
+			app.statusMessage = "Error: " + err.Error()
 		}
 	}
 
@@ -209,13 +213,13 @@ func (app *App) runAction(descriptor domain.Descriptor, action domain.Action) fu
 		}
 		return func() {
 			app.isBusy = false
-			app.statusMessage = "保存しました: " + savedPath
+			app.statusMessage = "Saved: " + savedPath
 		}
 	}
 	return fail(fmt.Errorf("unsupported action %d", action))
 }
 
-// Run は実端末で画面を開き、終了操作が行われるまでブロックする。
+// Run opens the screen on the real terminal and blocks until a quit operation is performed.
 func Run(ctx context.Context, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies) error {
 	screen, err := tcell.NewScreen()
 	if err != nil {

@@ -50,7 +50,7 @@ func TestSelectableObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// ルート(digestなし)と {"note"} は選択対象外。config と layers[0] の2つ。
+	// The root (no digest) and {"note"} are not selectable; only config and layers[0] are.
 	if len(document.SelectableObjects) != 2 {
 		t.Fatalf("got %d selectable objects: %+v", len(document.SelectableObjects), document.SelectableObjects)
 	}
@@ -58,7 +58,7 @@ func TestSelectableObjects(t *testing.T) {
 		t.Error("root object must not be selectable")
 	}
 
-	configObject, ok := document.SelectableObjectAt(4) // config 内の "mediaType" 行
+	configObject, ok := document.SelectableObjectAt(4) // the "mediaType" line inside config
 	if !ok || configObject.Descriptor != (domain.Descriptor{MediaType: domain.MediaTypeOCIImageConfig, Digest: "sha256:c0", Size: 10}) {
 		t.Errorf("config object = %+v, %v", configObject, ok)
 	}

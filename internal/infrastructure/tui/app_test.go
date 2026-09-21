@@ -73,7 +73,7 @@ func TestEnterOnlyOpensPopupOnSelectableObject(t *testing.T) {
 		t.Fatal("root object has no digest, popup must not open")
 	}
 
-	for range 4 { // 行4: manifests[0] 内
+	for range 4 { // line 4: inside manifests[0]
 		app.handleKey(keyPress(tcell.KeyDown))
 	}
 	app.handleKey(keyPress(tcell.KeyEnter))
@@ -102,7 +102,7 @@ func TestSelectedObjectIsReversed(t *testing.T) {
 		_, _, attributes := style.Decompose()
 		return attributes&tcell.AttrReverse != 0
 	}
-	// カーソルは行4(manifests[0]の "{")。オブジェクトは行4〜8、画面上はヘッダ1行ぶん下がって5〜9行目。
+	// The cursor is on line 4 (the "{" of manifests[0]). The object spans lines 4-8, shown at rows 5-9 on screen because of the one-line header.
 	for screenRow := 5; screenRow <= 9; screenRow++ {
 		if !isReversed(screenRow) {
 			t.Errorf("screen row %d must be reversed", screenRow)

@@ -2,7 +2,7 @@ package domain
 
 import "strings"
 
-// MediaType はOCI/DockerのmediaTypeを表す。
+// MediaType represents an OCI/Docker mediaType.
 type MediaType string
 
 const (
@@ -26,14 +26,14 @@ const (
 	MediaTypeCosignSimpleSign MediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
 )
 
-// Descriptor は registry 上のコンテンツを指し示す情報。
+// Descriptor is the information that points to content in a registry.
 type Descriptor struct {
 	MediaType MediaType
 	Digest    string
 	Size      int64
 }
 
-// IsManifest は manifest API で取得すべきコンテンツ(index / manifest)かを返す。
+// IsManifest reports whether the content (index / manifest) should be fetched through the manifest API.
 func (mediaType MediaType) IsManifest() bool {
 	switch mediaType {
 	case MediaTypeOCIImageIndex, MediaTypeOCIImageManifest,
@@ -47,7 +47,7 @@ func (mediaType MediaType) isJSON() bool {
 	return strings.HasSuffix(string(mediaType), "+json")
 }
 
-// FileExtension はダウンロード時のファイル拡張子(先頭のドット付き)を返す。
+// FileExtension returns the file extension used for downloads, including the leading dot.
 func (mediaType MediaType) FileExtension() string {
 	switch mediaType {
 	case MediaTypeOCILayerTarGzip, MediaTypeDockerLayerGzip:
@@ -63,7 +63,7 @@ func (mediaType MediaType) FileExtension() string {
 	return ".bin"
 }
 
-// DownloadFileName は digest 由来のダウンロードファイル名(例: sha256-xxxx.tar.gz)を返す。
+// DownloadFileName returns the download file name derived from the digest (e.g. sha256-xxxx.tar.gz).
 func (descriptor Descriptor) DownloadFileName() string {
 	return strings.ReplaceAll(descriptor.Digest, ":", "-") + descriptor.MediaType.FileExtension()
 }
