@@ -89,7 +89,6 @@ func (app *App) Run() {
 	}
 }
 
-// handleKey handles a key input and returns true if the app should quit.
 func (app *App) handleKey(event *tcell.EventKey) (shouldQuit bool) {
 	keyCommand := commandFor(event)
 	if keyCommand == commandQuit {

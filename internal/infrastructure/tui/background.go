@@ -2,9 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/muesli/termenv"
 )
+
+const backgroundDetectionTimeout = 500 * time.Millisecond
 
 type Theme int
 
@@ -54,5 +57,19 @@ func (theme Theme) hasDarkBackground() bool {
 }
 
 func detectDarkBackground() bool {
-	return termenv.HasDarkBackground()
+	return setTimeout(termenv.HasDarkBackground, backgroundDetectionTimeout, true)
+}
+
+func setTimeout[T any](fn func() T, timeout time.Duration, fallback T) T {
+	result := make(chan T, 1)
+	go func() {
+		result <- fn()
+	}()
+
+	select {
+	case value := <-result:
+		return value
+	case <-time.After(timeout):
+		return fallback
+	}
 }

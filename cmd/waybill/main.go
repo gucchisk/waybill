@@ -1,4 +1,3 @@
-// waybill is a CLI for browsing and downloading container image manifests.
 package main
 
 import (
@@ -26,8 +25,6 @@ func main() {
 	}
 }
 
-// newRootCommand returns the root command and the destination for runtime errors.
-// Returning a runtime error from RunE makes cobra print the usage, so it is handed to main through this destination.
 func newRootCommand() (*cobra.Command, *error) {
 	var runError error
 	theme := tui.ThemeAuto
