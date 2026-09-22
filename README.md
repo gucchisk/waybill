@@ -7,8 +7,8 @@ You can interactively walk from an image index → manifest → config / layer /
 ## Features
 
 - Shows pretty-printed, colorized JSON line by line
-- Highlights the whole cursor line with a background color, like a row selection in a list
-- Highlights (with a subtler background color) the innermost object under the cursor that has both `mediaType` and `digest`
+- Highlights the whole cursor line by swapping the terminal's foreground and background colors (white on gray on light backgrounds), like a row selection in a list
+- Highlights (with a subtler background color, chosen for dark or light terminal backgrounds) the innermost object under the cursor that has both `mediaType` and `digest`
 - Opens the selected object on a new screen (nestable), or downloads it to the current directory
 - Supports both arrow keys and Emacs key bindings
 - Uses Docker's configuration (`~/.docker/config.json`, etc.) through [regclient](https://github.com/regclient/regclient), so existing authentication and certificate settings just work
@@ -44,6 +44,7 @@ waybill ghcr.io/regclient/regctl:latest
 | Option | Description |
 | --- | --- |
 | `-h`, `--help` | Show usage |
+| `--theme auto\|dark\|light` | Background brightness used for highlight colors (default: `auto`, which queries the terminal; some terminals, e.g. tmux, may not answer, in which case it falls back to `dark` — use `--theme dark`/`--theme light` to set it explicitly) |
 
 If `<image-ref>` is missing or more than one is given, waybill prints the error message and the usage, then exits with status 1.
 

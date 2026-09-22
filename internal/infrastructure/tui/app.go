@@ -1,4 +1,3 @@
-// Package tui provides a terminal UI built on tcell.
 package tui
 
 import (
@@ -17,7 +16,6 @@ type Dependencies struct {
 	DownloadContent *usecase.DownloadContent
 }
 
-// contentView is one JSON screen being displayed.
 type contentView struct {
 	title      string
 	document   *jsonview.Document
@@ -25,7 +23,6 @@ type contentView struct {
 	topLine    int
 }
 
-// actionPopup holds the actions available for an object that has a mediaType.
 type actionPopup struct {
 	object   jsonview.SelectableObject
 	actions  []domain.Action
@@ -38,14 +35,21 @@ type App struct {
 	repository   string
 	dependencies Dependencies
 
+	cursorLineStyle         tcell.Style
+	selectedBackgroundColor tcell.Color
+
 	views         []*contentView
 	popup         *actionPopup
 	statusMessage string
 	isBusy        bool
 }
 
-func NewApp(ctx context.Context, screen tcell.Screen, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies) (*App, error) {
-	app := &App{ctx: ctx, screen: screen, repository: repository, dependencies: dependencies}
+func NewApp(ctx context.Context, screen tcell.Screen, hasDarkBackground bool, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies) (*App, error) {
+	app := &App{
+		ctx: ctx, screen: screen, repository: repository, dependencies: dependencies,
+		cursorLineStyle:         cursorLineStyleFor(hasDarkBackground),
+		selectedBackgroundColor: selectedBackgroundColorFor(hasDarkBackground),
+	}
 	rootView, err := newContentView(rootDescriptor, rootContent)
 	if err != nil {
 		return nil, err
@@ -65,7 +69,6 @@ func newContentView(descriptor domain.Descriptor, content []byte) (*contentView,
 	}, nil
 }
 
-// Run runs the event loop until a quit operation is performed.
 func (app *App) Run() {
 	for {
 		app.draw()
@@ -86,7 +89,6 @@ func (app *App) Run() {
 	}
 }
 
-// handleKey handles a key input and returns true if the app should quit.
 func (app *App) handleKey(event *tcell.EventKey) (shouldQuit bool) {
 	keyCommand := commandFor(event)
 	if keyCommand == commandQuit {
@@ -171,7 +173,6 @@ func (app *App) handlePopupCommand(keyCommand command) {
 	}
 }
 
-// execute runs an operation that involves network access in the background and applies the result on the event loop.
 func (app *App) execute(descriptor domain.Descriptor, action domain.Action) {
 	app.isBusy = true
 	app.statusMessage = fmt.Sprintf("%s... (%s)", action.ProgressLabel(), descriptor.Digest)
@@ -182,7 +183,6 @@ func (app *App) execute(descriptor domain.Descriptor, action domain.Action) {
 	}()
 }
 
-// runAction only performs the work without touching state, and returns a function that applies the result.
 func (app *App) runAction(descriptor domain.Descriptor, action domain.Action) func() {
 	fail := func(err error) func() {
 		return func() {
@@ -219,8 +219,9 @@ func (app *App) runAction(descriptor domain.Descriptor, action domain.Action) fu
 	return fail(fmt.Errorf("unsupported action %d", action))
 }
 
-// Run opens the screen on the real terminal and blocks until a quit operation is performed.
-func Run(ctx context.Context, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies) error {
+func Run(ctx context.Context, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies, theme Theme) error {
+	hasDarkBackground := theme.hasDarkBackground()
+
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return fmt.Errorf("create screen: %w", err)
@@ -230,7 +231,7 @@ func Run(ctx context.Context, repository string, rootDescriptor domain.Descripto
 	}
 	defer screen.Fini()
 
-	app, err := NewApp(ctx, screen, repository, rootDescriptor, rootContent, dependencies)
+	app, err := NewApp(ctx, screen, hasDarkBackground, repository, rootDescriptor, rootContent, dependencies)
 	if err != nil {
 		return err
 	}

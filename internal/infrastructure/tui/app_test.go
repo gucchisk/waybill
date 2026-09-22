@@ -40,7 +40,7 @@ func newTestApp(t *testing.T) (*App, tcell.SimulationScreen, *discardSaver) {
 
 	fetcher := staticFetcher{"sha256:m1": `{"schemaVersion":2,"layers":[]}`}
 	saver := &discardSaver{}
-	app, err := NewApp(context.Background(), screen, "example.com/repo",
+	app, err := NewApp(context.Background(), screen, true, "example.com/repo",
 		domain.Descriptor{MediaType: domain.MediaTypeOCIImageIndex, Digest: "sha256:root"}, []byte(indexJSON),
 		Dependencies{ViewContent: usecase.NewViewContent(fetcher), DownloadContent: usecase.NewDownloadContent(fetcher, saver)})
 	if err != nil {
@@ -97,25 +97,46 @@ func TestSelectedObjectHasBackground(t *testing.T) {
 	}
 	app.draw()
 
-	hasBackground := func(screenRow int, expected tcell.Color) bool {
+	styleAt := func(screenRow int) (background tcell.Color, isReversed bool) {
 		_, style, _ := screen.Get(10, screenRow)
-		_, background, _ := style.Decompose()
-		return background == expected
+		_, background, attributes := style.Decompose()
+		return background, attributes&tcell.AttrReverse != 0
 	}
 	// The cursor is on line 4 (the "{" of manifests[0]). The object spans lines 4-8, shown at rows 5-9 on screen because of the one-line header.
-	// The cursor line (row 5) has the cursor background; the other lines of the object have the selected background.
-	if !hasBackground(5, cursorBackgroundColor) {
-		t.Error("the cursor line must have the cursor background")
+	// The cursor line (row 5) is reversed; the other lines of the object have the selected background.
+	if _, isReversed := styleAt(5); !isReversed {
+		t.Error("the cursor line must be drawn in reverse video")
 	}
 	for screenRow := 6; screenRow <= 9; screenRow++ {
-		if !hasBackground(screenRow, selectedBackgroundColor) {
-			t.Errorf("screen row %d must have the selected background", screenRow)
+		background, isReversed := styleAt(screenRow)
+		if background != app.selectedBackgroundColor || isReversed {
+			t.Errorf("screen row %d must have the selected background and no reverse", screenRow)
 		}
 	}
 	for _, screenRow := range []int{3, 10} {
-		if hasBackground(screenRow, selectedBackgroundColor) || hasBackground(screenRow, cursorBackgroundColor) {
+		background, isReversed := styleAt(screenRow)
+		if background == app.selectedBackgroundColor || isReversed {
 			t.Errorf("screen row %d is outside the selected object and must have no highlight", screenRow)
 		}
+	}
+}
+
+func TestSelectedBackgroundColorFollowsTerminalBrightness(t *testing.T) {
+	if got := selectedBackgroundColorFor(true); got != tcell.ColorGray {
+		t.Errorf("dark background: %v, want Bright Black", got)
+	}
+	if got := selectedBackgroundColorFor(false); got != tcell.ColorSilver {
+		t.Errorf("light background: %v, want White", got)
+	}
+}
+
+func TestCursorLineStyleIsNotPureBlackOnLightBackground(t *testing.T) {
+	if _, _, attributes := cursorLineStyleFor(true).Decompose(); attributes&tcell.AttrReverse == 0 {
+		t.Error("dark background: the cursor line must be reverse video")
+	}
+	foreground, background, attributes := cursorLineStyleFor(false).Decompose()
+	if attributes&tcell.AttrReverse != 0 || foreground != tcell.ColorWhite || background != tcell.ColorGray {
+		t.Errorf("light background: got fg=%v bg=%v attributes=%v, want White on Bright Black without reverse", foreground, background, attributes)
 	}
 }
 
@@ -125,9 +146,9 @@ func TestCursorLineIsHighlightedEvenWithoutSelectableObject(t *testing.T) {
 
 	// The cursor is on line 0 (the root "{"), which is not inside a selectable object.
 	_, style, _ := screen.Get(10, 1)
-	_, background, _ := style.Decompose()
-	if background != cursorBackgroundColor {
-		t.Errorf("background = %v, want the cursor background", background)
+	_, _, attributes := style.Decompose()
+	if attributes&tcell.AttrReverse == 0 {
+		t.Error("the cursor line must be drawn in reverse video")
 	}
 	if text, _, _ := screen.Get(0, 1); text == ">" {
 		t.Error("the \">\" cursor marker must not be drawn")

@@ -22,12 +22,22 @@ import (
 //	 6 Cyan           tcell.ColorTeal     14 Bright Cyan     tcell.ColorAqua
 //	 7 White          tcell.ColorSilver   15 Bright White    tcell.ColorWhite
 
-// selectedBackgroundColor is the subtle background of the selected object (Bright Black).
-// With some color schemes (e.g. Solarized) Bright Black blends into the background; use tcell.ColorBlack then.
-const selectedBackgroundColor = tcell.ColorGray
+// cursorLineStyleFor returns the style of the whole cursor line for the terminal's background brightness.
+// On a dark background it is reverse video, which swaps the terminal's default foreground and background.
+// On a light background reverse video turns the line pure black and hard to read, so it is White (15) text on Bright Black (8) instead.
+func cursorLineStyleFor(hasDarkBackground bool) tcell.Style {
+	if hasDarkBackground {
+		return tcell.StyleDefault.Reverse(true)
+	}
+	return tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGray)
+}
 
-// cursorBackgroundColor is the background of the whole cursor line (Blue). It is stronger than selectedBackgroundColor.
-const cursorBackgroundColor = tcell.ColorNavy
+func selectedBackgroundColorFor(hasDarkBackground bool) tcell.Color {
+	if hasDarkBackground {
+		return tcell.ColorGray
+	}
+	return tcell.ColorSilver
+}
 
 const helpText = "↑↓/C-p C-n:move  PgUp PgDn/M-v C-v:page  Enter:select action  Esc/q:back  C-c:quit"
 
@@ -39,7 +49,6 @@ var spanStyles = map[jsonview.SpanKind]tcell.Style{
 	jsonview.SpanLiteral:     tcell.StyleDefault.Foreground(tcell.ColorPurple),
 }
 
-// bodyHeight is the number of rows in the JSON area, excluding the header and footer.
 func (app *App) bodyHeight() int {
 	_, height := app.screen.Size()
 	return max(height-2, 1)
@@ -84,25 +93,24 @@ func (app *App) drawBody(view *contentView, width int) {
 		isCursorLine := lineNumber == view.cursorLine
 		isSelected := hasSelectedObject && lineNumber >= selectedObject.StartLine && lineNumber <= selectedObject.EndLine
 
-		hasBackground := true
-		var background tcell.Color
+		rowStyle := tcell.StyleDefault
 		switch {
 		case isCursorLine:
-			background = cursorBackgroundColor
+			rowStyle = app.cursorLineStyle
+			app.fillRow(screenRow, width, rowStyle)
 		case isSelected:
-			background = selectedBackgroundColor
-		default:
-			hasBackground = false
-		}
-		if hasBackground {
-			app.fillRow(screenRow, width, tcell.StyleDefault.Background(background))
+			rowStyle = rowStyle.Background(app.selectedBackgroundColor)
+			app.fillRow(screenRow, width, rowStyle)
 		}
 
 		x := 0
 		for _, span := range view.document.Lines[lineNumber].Spans {
-			style := spanStyles[span.Kind]
-			if hasBackground {
-				style = style.Background(background)
+			style := rowStyle
+			if !isCursorLine {
+				style = spanStyles[span.Kind]
+				if isSelected {
+					style = style.Background(app.selectedBackgroundColor)
+				}
 			}
 			x = app.drawText(x, screenRow, span.Text, style, width)
 		}
@@ -171,7 +179,6 @@ func (app *App) fillRow(row, width int, style tcell.Style) {
 	}
 }
 
-// drawText draws text up to limitX (exclusive) and returns the next draw position. It accounts for the width of full-width characters.
 func (app *App) drawText(x, y int, text string, style tcell.Style, limitX int) int {
 	for text != "" && x < limitX {
 		remaining, cellWidth := app.screen.Put(x, y, text, style)

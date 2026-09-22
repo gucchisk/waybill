@@ -1,6 +1,5 @@
 package domain
 
-// Action is an operation that can be performed on an object that has a mediaType.
 type Action int
 
 const (
@@ -18,7 +17,6 @@ func (action Action) Label() string {
 	return ""
 }
 
-// ProgressLabel returns the label shown while the action is running.
 func (action Action) ProgressLabel() string {
 	switch action {
 	case ActionView:
@@ -29,8 +27,6 @@ func (action Action) ProgressLabel() string {
 	return ""
 }
 
-// ActionsFor returns the actions available for each mediaType.
-// An unknown mediaType gets view and download if it ends with +json, and download only otherwise.
 func ActionsFor(mediaType MediaType) []Action {
 	switch mediaType {
 	case MediaTypeOCIEmpty:
