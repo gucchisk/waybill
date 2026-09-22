@@ -30,6 +30,7 @@ func main() {
 // Returning a runtime error from RunE makes cobra print the usage, so it is handed to main through this destination.
 func newRootCommand() (*cobra.Command, *error) {
 	var runError error
+	theme := tui.ThemeAuto
 	rootCommand := &cobra.Command{
 		Use:     "waybill <image-ref>",
 		Short:   "Browse and download container image manifests",
@@ -37,14 +38,15 @@ func newRootCommand() (*cobra.Command, *error) {
 		Example: "  waybill ghcr.io/regclient/regctl:latest",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
-			runError = run(command.Context(), arguments[0])
+			runError = run(command.Context(), arguments[0], theme)
 			return nil
 		},
 	}
+	rootCommand.Flags().Var(&theme, "theme", "terminal background: auto, dark, or light (auto detects it, but some terminals, e.g. tmux, may not answer)")
 	return rootCommand, &runError
 }
 
-func run(parentCtx context.Context, imageReference string) error {
+func run(parentCtx context.Context, imageReference string, theme tui.Theme) error {
 	ctx, stop := signal.NotifyContext(parentCtx, os.Interrupt)
 	defer stop()
 
@@ -69,5 +71,5 @@ func run(parentCtx context.Context, imageReference string) error {
 	return tui.Run(ctx, repository, rootDescriptor, rootContent, tui.Dependencies{
 		ViewContent:     viewContent,
 		DownloadContent: downloadContent,
-	})
+	}, theme)
 }
