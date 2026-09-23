@@ -72,8 +72,10 @@ jobs:
         run: |
           # Replace url/sha256 and drop the old bottle block; brew pr-pull adds a new one.
           # cat -s squeezes the blank lines left behind by the removed block.
+          # Escape \, & and the | delimiter so a tag like v1&rc1 is inserted literally in the replacement.
+          escaped_tarball_url="$(printf '%s' "$TARBALL_URL" | sed -e 's/[\\&|]/\\&/g')"
           sed \
-            -e "s|^  url \".*\"|  url \"${TARBALL_URL}\"|" \
+            -e "s|^  url \".*\"|  url \"${escaped_tarball_url}\"|" \
             -e "s|^  sha256 \".*\"|  sha256 \"${TARBALL_SHA256}\"|" \
             -e '/^  bottle do$/,/^  end$/d' \
             "$FORMULA_PATH" | cat -s > "$RUNNER_TEMP/formula.rb"
