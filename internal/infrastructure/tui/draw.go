@@ -1,10 +1,13 @@
 package tui
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/uniseg"
 
 	"github.com/gucchisk/waybill/internal/adapter/jsonview"
+	"github.com/gucchisk/waybill/internal/domain"
 )
 
 // Colors: use only the ANSI palette colors 0-15 so that the TUI follows the terminal's color scheme
@@ -39,8 +42,6 @@ func selectedBackgroundColorFor(hasDarkBackground bool) tcell.Color {
 	return tcell.ColorSilver
 }
 
-const helpText = "↑↓/C-p C-n:move  PgUp PgDn/M-v C-v:page  Enter:select action  Esc/q:back  C-c:quit"
-
 var spanStyles = map[jsonview.SpanKind]tcell.Style{
 	jsonview.SpanPunctuation: tcell.StyleDefault,
 	jsonview.SpanKey:         tcell.StyleDefault.Foreground(tcell.ColorTeal),
@@ -65,9 +66,6 @@ func (app *App) draw() {
 	app.drawText(0, 0, view.title, headerStyle, width)
 	app.drawBody(view, width)
 	app.drawFooter(height-1, width)
-	if app.popup != nil {
-		app.drawPopup(width, height)
-	}
 	app.screen.Show()
 }
 
@@ -122,55 +120,27 @@ func (app *App) drawFooter(row, width int) {
 		app.drawText(0, row, app.statusMessage, tcell.StyleDefault.Bold(true), width)
 		return
 	}
-	app.drawText(0, row, helpText, tcell.StyleDefault.Dim(true), width)
+	app.drawText(0, row, app.helpText(), tcell.StyleDefault.Dim(true), width)
 }
 
-func (app *App) drawPopup(screenWidth, screenHeight int) {
-	popup := app.popup
-	title := string(popup.object.Descriptor.MediaType)
-
-	contentWidth := uniseg.StringWidth(title)
-	for _, action := range popup.actions {
-		contentWidth = max(contentWidth, uniseg.StringWidth(action.Label())+2)
+// helpText lists only the keys that are usable right now.
+// The action keys are shown only when the cursor is inside an object whose mediaType allows the action.
+func (app *App) helpText() string {
+	_, actions := app.availableActions()
+	keyHelps := []string{"↑↓/C-p C-n:move", "PgUp PgDn/M-v C-v:page"}
+	if slices.Contains(actions, domain.ActionView) {
+		keyHelps = append(keyHelps, "Enter:view JSON")
 	}
-	boxWidth := min(contentWidth+4, screenWidth)
-	boxHeight := min(len(popup.actions)+4, screenHeight)
-	left := (screenWidth - boxWidth) / 2
-	top := (screenHeight - boxHeight) / 2
-	right := left + boxWidth - 1
-	bottom := top + boxHeight - 1
-
-	borderStyle := tcell.StyleDefault
-	for y := top; y <= bottom; y++ {
-		for x := left; x <= right; x++ {
-			app.screen.Put(x, y, " ", borderStyle)
-		}
+	if slices.Contains(actions, domain.ActionDownload) {
+		keyHelps = append(keyHelps, "d:download")
 	}
-	for x := left + 1; x < right; x++ {
-		app.screen.Put(x, top, "─", borderStyle)
-		app.screen.Put(x, bottom, "─", borderStyle)
+	if len(app.views) == 1 {
+		keyHelps = append(keyHelps, "Esc/q:quit")
+	} else {
+		keyHelps = append(keyHelps, "Esc/q:back")
 	}
-	for y := top + 1; y < bottom; y++ {
-		app.screen.Put(left, y, "│", borderStyle)
-		app.screen.Put(right, y, "│", borderStyle)
-	}
-	app.screen.Put(left, top, "┌", borderStyle)
-	app.screen.Put(right, top, "┐", borderStyle)
-	app.screen.Put(left, bottom, "└", borderStyle)
-	app.screen.Put(right, bottom, "┘", borderStyle)
-
-	app.drawText(left+2, top+1, title, tcell.StyleDefault.Bold(true), right-1)
-	for index, action := range popup.actions {
-		style := tcell.StyleDefault
-		row := top + 2 + index
-		if index == popup.selected {
-			style = style.Reverse(true)
-			for x := left + 1; x < right; x++ {
-				app.screen.Put(x, row, " ", style)
-			}
-		}
-		app.drawText(left+2, row, action.Label(), style, right-1)
-	}
+	keyHelps = append(keyHelps, "C-c:quit")
+	return strings.Join(keyHelps, "  ")
 }
 
 func (app *App) fillRow(row, width int, style tcell.Style) {

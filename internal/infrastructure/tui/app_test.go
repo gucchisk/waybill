@@ -66,27 +66,79 @@ func TestCursorMovesWithArrowAndEmacsKeys(t *testing.T) {
 	}
 }
 
-func TestEnterOnlyOpensPopupOnSelectableObject(t *testing.T) {
+func runePress(character rune) *tcell.EventKey {
+	return tcell.NewEventKey(tcell.KeyRune, character, tcell.ModNone)
+}
+
+func TestActionKeysDoNothingOutsideSelectableObject(t *testing.T) {
 	app, _, _ := newTestApp(t)
 	app.handleKey(keyPress(tcell.KeyEnter))
-	if app.popup != nil {
-		t.Fatal("root object has no digest, popup must not open")
+	app.handleKey(runePress('d'))
+	if app.isBusy {
+		t.Fatal("root object has no digest, Enter / d must not run any action")
+	}
+}
+
+func TestEnterViewsAndDKeyDownloadsSelectableObject(t *testing.T) {
+	testCases := []struct {
+		name           string
+		key            *tcell.EventKey
+		expectedStatus string
+	}{
+		{"Enter", keyPress(tcell.KeyEnter), "Viewing..."},
+		{"d", runePress('d'), "Downloading..."},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			app, _, _ := newTestApp(t)
+			for range 4 { // line 4: inside manifests[0]
+				app.handleKey(keyPress(tcell.KeyDown))
+			}
+			app.handleKey(testCase.key)
+			if !app.isBusy || !strings.HasPrefix(app.statusMessage, testCase.expectedStatus) {
+				t.Errorf("isBusy=%v status=%q, want %q", app.isBusy, app.statusMessage, testCase.expectedStatus)
+			}
+		})
+	}
+}
+
+func TestHelpTextShowsOnlyAvailableKeys(t *testing.T) {
+	app, _, _ := newTestApp(t)
+	helpText := app.helpText()
+	if strings.Contains(helpText, "Enter:") || strings.Contains(helpText, "d:download") {
+		t.Errorf("outside a selectable object, action keys must not be shown: %q", helpText)
+	}
+	if !strings.Contains(helpText, "Esc/q:quit") {
+		t.Errorf("on the root view, Esc/q must be shown as quit: %q", helpText)
 	}
 
 	for range 4 { // line 4: inside manifests[0]
 		app.handleKey(keyPress(tcell.KeyDown))
 	}
+	helpText = app.helpText()
+	if !strings.Contains(helpText, "Enter:view JSON") || !strings.Contains(helpText, "d:download") {
+		t.Errorf("inside a manifest object, Enter and d must be shown: %q", helpText)
+	}
+}
+
+func TestHelpTextHidesUnsupportedAction(t *testing.T) {
+	app, _, _ := newTestApp(t)
+	layerJSON := `{"layers":[{"mediaType":"application/vnd.oci.image.layer.v1.tar+gzip","digest":"sha256:l1","size":1}]}`
+	view, err := newContentView(domain.Descriptor{MediaType: domain.MediaTypeOCIImageManifest, Digest: "sha256:m1"}, []byte(layerJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.views = append(app.views, view)
+	for range 2 { // line 2: the "{" of layers[0]
+		app.handleKey(keyPress(tcell.KeyDown))
+	}
+	helpText := app.helpText()
+	if strings.Contains(helpText, "Enter:") || !strings.Contains(helpText, "d:download") || !strings.Contains(helpText, "Esc/q:back") {
+		t.Errorf("on a layer, only d must be shown as an action and Esc/q as back: %q", helpText)
+	}
 	app.handleKey(keyPress(tcell.KeyEnter))
-	if app.popup == nil || len(app.popup.actions) != 2 {
-		t.Fatalf("popup = %+v", app.popup)
-	}
-	app.handleKey(keyPress(tcell.KeyCtrlN))
-	if app.popup.selected != 1 {
-		t.Errorf("selected = %d", app.popup.selected)
-	}
-	app.handleKey(keyPress(tcell.KeyEscape))
-	if app.popup != nil {
-		t.Error("popup must close on Esc")
+	if app.isBusy {
+		t.Error("Enter must not run on a layer, which cannot be viewed")
 	}
 }
 
