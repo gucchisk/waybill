@@ -134,7 +134,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The `release` workflow then runs the tests, creates the GitHub Release with a source tarball (`waybill-<version>.tar.gz`, made with `git archive`) as an asset, and opens a pull request on [gucchisk/homebrew-tap](https://github.com/gucchisk/homebrew-tap) that points `Formula/waybill.rb` at that tarball. The formula does not use GitHub's generated `archive/refs/tags/*.tar.gz`, whose checksum can change when GitHub recompresses it. On the tap, `brew test-bot` builds bottles for macOS and Linux; adding the `pr-pull` label to the pull request uploads the bottles to the tap's GitHub Release and commits the `bottle do` block.
+The tag must match `^v[0-9A-Za-z][0-9A-Za-z._-]*$` (e.g. `v1.2.3`, `v1.0.0-rc.1`), because it becomes part of the release asset URL; otherwise the workflow fails. The `release` workflow then runs the tests, creates the GitHub Release with a source tarball (`waybill-<version>.tar.gz`, made with `git archive`) as an asset, and opens a pull request on [gucchisk/homebrew-tap](https://github.com/gucchisk/homebrew-tap) that points `Formula/waybill.rb` at that tarball. The formula does not use GitHub's generated `archive/refs/tags/*.tar.gz`, whose checksum can change when GitHub recompresses it. On the tap, `brew test-bot` builds bottles for macOS and Linux; adding the `pr-pull` label to the pull request uploads the bottles to the tap's GitHub Release and commits the `bottle do` block.
 
 The workflow needs a `HOMEBREW_TAP_TOKEN` secret: a personal access token with Contents and Pull requests write access to the tap repository.
 
