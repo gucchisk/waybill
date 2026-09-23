@@ -12,7 +12,8 @@ const (
 	commandPageDown
 	commandTop
 	commandBottom
-	commandConfirm
+	commandView
+	commandDownload
 	commandBack
 	commandQuit
 )
@@ -33,7 +34,7 @@ func commandFor(event *tcell.EventKey) command {
 	case tcell.KeyEnd:
 		return commandBottom
 	case tcell.KeyEnter:
-		return commandConfirm
+		return commandView
 	case tcell.KeyEscape, tcell.KeyCtrlG:
 		return commandBack
 	case tcell.KeyCtrlC:
@@ -56,8 +57,11 @@ func commandForRune(event *tcell.EventKey) command {
 		}
 		return commandNone
 	}
-	if event.Rune() == 'q' {
+	switch event.Rune() {
+	case 'q':
 		return commandBack
+	case 'd':
+		return commandDownload
 	}
 	return commandNone
 }

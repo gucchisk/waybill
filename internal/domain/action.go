@@ -7,16 +7,6 @@ const (
 	ActionDownload
 )
 
-func (action Action) Label() string {
-	switch action {
-	case ActionView:
-		return "View"
-	case ActionDownload:
-		return "Download"
-	}
-	return ""
-}
-
 func (action Action) ProgressLabel() string {
 	switch action {
 	case ActionView:

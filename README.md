@@ -9,7 +9,8 @@ You can interactively walk from an image index → manifest → config / layer /
 - Shows pretty-printed, colorized JSON line by line
 - Highlights the whole cursor line by swapping the terminal's foreground and background colors (white on gray on light backgrounds), like a row selection in a list
 - Highlights (with a subtler background color, chosen for dark or light terminal backgrounds) the innermost object under the cursor that has both `mediaType` and `digest`
-- Opens the selected object on a new screen (nestable), or downloads it to the current directory
+- Opens the selected object on a new screen (nestable) with `Enter`, or downloads it to the current directory with `d`
+- Shows only the keys usable right now at the bottom of the screen (e.g. `Enter` / `d` appear only when the cursor is inside an object that supports them)
 - Supports both arrow keys and Emacs key bindings
 - Uses Docker's configuration (`~/.docker/config.json`, etc.) through [regclient](https://github.com/regclient/regclient), so existing authentication and certificate settings just work
 
@@ -51,9 +52,9 @@ If `<image-ref>` is missing or more than one is given, waybill prints the error 
 
 1. On startup, the image manifest is shown as JSON.
 2. As you move the cursor, the cursor line is highlighted, and the innermost object that has `mediaType` and `digest` is highlighted.
-3. Press `Enter` to open a popup for choosing an action (View / Download). Press `Enter` again to run it.
-4. Choosing "View" opens the fetched JSON on a new screen. Press `Esc` / `q` to go back.
-5. Choosing "Download" saves the content to the current directory and shows the saved path in the status line.
+3. Press `Enter` to open the fetched JSON on a new screen (View). Press `Esc` / `q` to go back.
+4. Press `d` to save the content to the current directory (Download). The saved path is shown in the status line.
+5. Keys for actions the mediaType does not support are ignored (see [Actions per mediaType](#actions-per-mediatype)).
 
 Objects without a `digest` (such as the root manifest) cannot be selected because there is no way to tell where to fetch them from.
 
@@ -64,8 +65,9 @@ Objects without a `digest` (such as the root manifest) cannot be selected becaus
 | Up / Down | `↑` / `↓`, `Ctrl-p` / `Ctrl-n` |
 | Page up / Page down | `PgUp` / `PgDn`, `Alt-v` / `Ctrl-v` |
 | Top / Bottom | `Home` / `End`, `Alt-<` / `Alt->` |
-| Show popup / Run | `Enter` |
-| Close popup / Go back | `Esc`, `Ctrl-g`, `q` |
+| View JSON | `Enter` |
+| Download | `d` |
+| Go back | `Esc`, `Ctrl-g`, `q` |
 | Quit | `Ctrl-c` (`Esc` / `q` also quit on the first screen) |
 
 While fetching or downloading, all keys except `Ctrl-c` are ignored.

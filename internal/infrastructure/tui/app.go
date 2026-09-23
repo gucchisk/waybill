@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/gdamore/tcell/v2"
 
@@ -23,12 +24,6 @@ type contentView struct {
 	topLine    int
 }
 
-type actionPopup struct {
-	object   jsonview.SelectableObject
-	actions  []domain.Action
-	selected int
-}
-
 type App struct {
 	screen       tcell.Screen
 	ctx          context.Context
@@ -39,7 +34,6 @@ type App struct {
 	selectedBackgroundColor tcell.Color
 
 	views         []*contentView
-	popup         *actionPopup
 	statusMessage string
 	isBusy        bool
 }
@@ -97,10 +91,6 @@ func (app *App) handleKey(event *tcell.EventKey) (shouldQuit bool) {
 	if app.isBusy {
 		return false
 	}
-	if app.popup != nil {
-		app.handlePopupCommand(keyCommand)
-		return false
-	}
 	return app.handleViewCommand(keyCommand)
 }
 
@@ -127,8 +117,10 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 		view.cursorLine = 0
 	case commandBottom:
 		view.cursorLine = lastLine
-	case commandConfirm:
-		app.openPopup()
+	case commandView:
+		app.executeOnSelectedObject(domain.ActionView)
+	case commandDownload:
+		app.executeOnSelectedObject(domain.ActionDownload)
 	case commandBack:
 		if len(app.views) == 1 {
 			return true
@@ -138,39 +130,24 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 	return false
 }
 
-func (app *App) openPopup() {
-	object, ok := app.currentView().document.SelectableObjectAt(app.currentView().cursorLine)
+// availableActions returns the selectable object under the cursor and the actions allowed for its mediaType.
+// It returns no actions when the cursor is not inside a selectable object.
+func (app *App) availableActions() (jsonview.SelectableObject, []domain.Action) {
+	view := app.currentView()
+	object, ok := view.document.SelectableObjectAt(view.cursorLine)
 	if !ok {
-		return
+		return jsonview.SelectableObject{}, nil
 	}
-	actions := domain.ActionsFor(object.Descriptor.MediaType)
-	if len(actions) == 0 {
-		return
-	}
-	app.popup = &actionPopup{object: object, actions: actions}
+	return object, domain.ActionsFor(object.Descriptor.MediaType)
 }
 
-func (app *App) closePopup() {
-	app.popup = nil
-}
-
-func (app *App) handlePopupCommand(keyCommand command) {
-	popup := app.popup
-	switch keyCommand {
-	case commandUp:
-		popup.selected = max(popup.selected-1, 0)
-	case commandDown:
-		popup.selected = min(popup.selected+1, len(popup.actions)-1)
-	case commandTop, commandPageUp:
-		popup.selected = 0
-	case commandBottom, commandPageDown:
-		popup.selected = len(popup.actions) - 1
-	case commandBack:
-		app.closePopup()
-	case commandConfirm:
-		app.closePopup()
-		app.execute(popup.object.Descriptor, popup.actions[popup.selected])
+// executeOnSelectedObject runs the action on the object under the cursor, only if its mediaType allows the action.
+func (app *App) executeOnSelectedObject(action domain.Action) {
+	object, actions := app.availableActions()
+	if !slices.Contains(actions, action) {
+		return
 	}
+	app.execute(object.Descriptor, action)
 }
 
 func (app *App) execute(descriptor domain.Descriptor, action domain.Action) {
