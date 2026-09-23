@@ -84,7 +84,8 @@ mediaTypeによる挙動は以下のテーブルに集約する。
     4. waybillのGitHub Releaseを作成し、ソースtarballをアセットとしてアップロード(リリースノートは自動生成)
     5. tapの`Formula/waybill.rb`のurl / sha256をアップロードしたソースtarballに更新するPRを作成
 - FormulaのurlにはGitHubが自動生成するアーカイブ(`archive/refs/tags/*.tar.gz`)を使わない(再圧縮でsha256が変わることがあるため)
-- tap側ではPRに対して`brew test-bot`がmacOS各版・Linuxのbottleをビルドし、`pr-pull`ラベルを付けると`brew pr-pull`がbottleをtapのGitHub Releaseにアップロードし、Formulaに`bottle do`ブロックを追加する
+- tap側ではPRに対して`brew test-bot`がmacOS各版・Linuxのbottleをビルドし、全OSで成功すると自動的に`brew pr-pull`がbottleをtapのGitHub Releaseにアップロードし、Formulaに`bottle do`ブロックを追加してtapのmainにpushする(PRはClosedになる)
+    - 自動実行の対象はtapリポジトリ内の`waybill-*`ブランチからのPRのみ。それ以外のPRは`pr-pull`ラベルを付けると同じ処理を行う
 - tapへのPR作成には、tapリポジトリへのContents / Pull requestsの書き込み権限を持つPATをsecret `HOMEBREW_TAP_TOKEN`に登録しておく
 
 ## development
