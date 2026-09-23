@@ -6,10 +6,12 @@
 - [tcell](https://github.com/gdamore/tcell) (TUI)
 - Clean architecture (`internal/domain` / `usecase` / `adapter` / `infrastructure`)
 
+To build from source:
+
 ```sh
-go build ./...
-go test ./...
-```
+git clone https://github.com/gucchisk/waybill.git
+cd waybill
+go build -o waybill ./cmd/waybill
 
 ## Release
 
