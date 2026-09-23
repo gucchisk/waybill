@@ -79,8 +79,10 @@ mediaTypeによる挙動は以下のテーブルに集約する。
 - Homebrewのtap(`gucchisk/homebrew-tap`)でbottleとして配布する(`brew install gucchisk/tap/waybill`)
 - `v*`のタグをpushすると、GitHub Actions(`.github/workflows/release.yml`)が以下を行う
     1. `go test`を実行
-    2. waybillのGitHub Releaseを作成(リリースノートは自動生成)
-    3. tapの`Formula/waybill.rb`のurl / sha256を新しいタグのソースtarballに更新するPRを作成
+    2. `git archive`でソースtarball(`waybill-<version>.tar.gz`)を作成
+    3. waybillのGitHub Releaseを作成し、ソースtarballをアセットとしてアップロード(リリースノートは自動生成)
+    4. tapの`Formula/waybill.rb`のurl / sha256をアップロードしたソースtarballに更新するPRを作成
+- FormulaのurlにはGitHubが自動生成するアーカイブ(`archive/refs/tags/*.tar.gz`)を使わない(再圧縮でsha256が変わることがあるため)
 - tap側ではPRに対して`brew test-bot`がmacOS各版・Linuxのbottleをビルドし、`pr-pull`ラベルを付けると`brew pr-pull`がbottleをtapのGitHub Releaseにアップロードし、Formulaに`bottle do`ブロックを追加する
 - tapへのPR作成には、tapリポジトリへのContents / Pull requestsの書き込み権限を持つPATをsecret `HOMEBREW_TAP_TOKEN`に登録しておく
 

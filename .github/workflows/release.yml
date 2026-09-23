@@ -9,6 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        # An explicit bash shell runs with -eo pipefail, so a failed command in a pipeline fails the step.
+        shell: bash
+    outputs:
+      version: ${{ steps.source.outputs.version }}
+      tarball_url: ${{ steps.source.outputs.tarball_url }}
+      tarball_sha256: ${{ steps.source.outputs.tarball_sha256 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,30 +27,39 @@ jobs:
       - name: Run go test
         run: go test ./...
 
+      - name: Create source tarball
+        id: source
+        run: |
+          # GitHub's generated archive/refs/tags/*.tar.gz may be recompressed later and change its checksum,
+          # so the formula points at a tarball uploaded once as a release asset instead.
+          version="${GITHUB_REF_NAME#v}"
+          tarball_name="waybill-${version}.tar.gz"
+          git archive --format=tar.gz --prefix="waybill-${version}/" -o "$RUNNER_TEMP/$tarball_name" HEAD
+          tarball_sha256="$(sha256sum "$RUNNER_TEMP/$tarball_name" | cut -d' ' -f1)"
+          {
+            echo "version=$version"
+            echo "tarball_path=$RUNNER_TEMP/$tarball_name"
+            echo "tarball_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${tarball_name}"
+            echo "tarball_sha256=$tarball_sha256"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes
+          TARBALL_PATH: ${{ steps.source.outputs.tarball_path }}
+        run: gh release create "$GITHUB_REF_NAME" "$TARBALL_PATH" --repo "$GITHUB_REPOSITORY" --generate-notes
 
   bump-tap:
     needs: release
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        # An explicit bash shell runs with -eo pipefail, so a failed sed fails the step.
+        shell: bash
     env:
       TAP_REPOSITORY: gucchisk/homebrew-tap
       FORMULA_PATH: Formula/waybill.rb
     steps:
-      - name: Compute version and tarball checksum
-        id: source
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          tarball_url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
-          tarball_sha256="$(curl -fsSL "$tarball_url" | sha256sum | cut -d' ' -f1)"
-          {
-            echo "version=$version"
-            echo "tarball_url=$tarball_url"
-            echo "tarball_sha256=$tarball_sha256"
-          } >> "$GITHUB_OUTPUT"
-
       - uses: actions/checkout@v4
         with:
           repository: ${{ env.TAP_REPOSITORY }}
@@ -50,8 +67,8 @@ jobs:
 
       - name: Update formula
         env:
-          TARBALL_URL: ${{ steps.source.outputs.tarball_url }}
-          TARBALL_SHA256: ${{ steps.source.outputs.tarball_sha256 }}
+          TARBALL_URL: ${{ needs.release.outputs.tarball_url }}
+          TARBALL_SHA256: ${{ needs.release.outputs.tarball_sha256 }}
         run: |
           # Replace url/sha256 and drop the old bottle block; brew pr-pull adds a new one.
           # cat -s squeezes the blank lines left behind by the removed block.
@@ -66,7 +83,7 @@ jobs:
       - name: Open pull request
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ steps.source.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
           branch="waybill-${VERSION}"
           git config user.name "github-actions[bot]"
