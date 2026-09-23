@@ -15,6 +15,7 @@
 - `waybill <image-ref>`(例: `waybill ghcr.io/regclient/regctl:latest`)
 - 引数が`<image-ref>`ひとつ以外の場合はエラーメッセージと使い方(usage)を表示して異常終了する(終了コード1)
 - `-h` / `--help`で使い方を表示する
+- `-v` / `--version`でバージョンを表示する(ビルド時に`-ldflags "-X main.version=<version>"`で埋め込む。未指定の場合は`dev`)
 - `--theme auto|dark|light`で背景の明暗に応じたハイライト色を選択する(既定値は`auto`)
 - 認証・証明書はDockerの設定(`~/.docker/config.json`等)をregclient経由で利用する
 
@@ -72,6 +73,19 @@ mediaTypeによる挙動は以下のテーブルに集約する。
 | application/vnd.docker.image.rootfs.diff.tar.gzip | ダウンロード |
 | 未知の`+json`で終わるmediaType | 表示、ダウンロード |
 | 未知のその他のmediaType | ダウンロード |
+
+## 配布・リリース
+
+- Homebrewのtap(`gucchisk/homebrew-tap`)でbottleとして配布する(`brew install gucchisk/tap/waybill`)
+- `v*`のタグをpushすると、GitHub Actions(`.github/workflows/release.yml`)が以下を行う
+    1. タグ名が`^v[0-9A-Za-z][0-9A-Za-z._-]*$`に一致するか検証し、一致しなければ失敗する(タグはリリースアセットのURLとファイル名に使うため、`#`などURLで特別な意味を持つ文字を許可しない)
+    2. `go test`を実行
+    3. `git archive`でソースtarball(`waybill-<version>.tar.gz`)を作成
+    4. waybillのGitHub Releaseを作成し、ソースtarballをアセットとしてアップロード(リリースノートは自動生成)
+    5. tapの`Formula/waybill.rb`のurl / sha256をアップロードしたソースtarballに更新するPRを作成
+- FormulaのurlにはGitHubが自動生成するアーカイブ(`archive/refs/tags/*.tar.gz`)を使わない(再圧縮でsha256が変わることがあるため)
+- tap側ではPRに対して`brew test-bot`がmacOS各版・Linuxのbottleをビルドし、`pr-pull`ラベルを付けると`brew pr-pull`がbottleをtapのGitHub Releaseにアップロードし、Formulaに`bottle do`ブロックを追加する
+- tapへのPR作成には、tapリポジトリへのContents / Pull requestsの書き込み権限を持つPATをsecret `HOMEBREW_TAP_TOKEN`に登録しておく
 
 ## development
 

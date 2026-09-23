@@ -1,0 +1,110 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        # An explicit bash shell runs with -eo pipefail, so a failed command in a pipeline fails the step.
+        shell: bash
+    outputs:
+      version: ${{ steps.source.outputs.version }}
+      tarball_url: ${{ steps.source.outputs.tarball_url }}
+      tarball_sha256: ${{ steps.source.outputs.tarball_sha256 }}
+    steps:
+      - name: Validate tag name
+        run: |
+          # The tag becomes a path segment of the release asset URL and part of the asset name,
+          # so characters such as # (URL fragment), ? or spaces would break the formula download.
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' must match ^v[0-9A-Za-z][0-9A-Za-z._-]*\$ to be used in the release URL."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run go test
+        run: go test ./...
+
+      - name: Create source tarball
+        id: source
+        run: |
+          # GitHub's generated archive/refs/tags/*.tar.gz may be recompressed later and change its checksum,
+          # so the formula points at a tarball uploaded once as a release asset instead.
+          version="${GITHUB_REF_NAME#v}"
+          tarball_name="waybill-${version}.tar.gz"
+          git archive --format=tar.gz --prefix="waybill-${version}/" -o "$RUNNER_TEMP/$tarball_name" HEAD
+          tarball_sha256="$(sha256sum "$RUNNER_TEMP/$tarball_name" | cut -d' ' -f1)"
+          {
+            echo "version=$version"
+            echo "tarball_path=$RUNNER_TEMP/$tarball_name"
+            echo "tarball_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${tarball_name}"
+            echo "tarball_sha256=$tarball_sha256"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARBALL_PATH: ${{ steps.source.outputs.tarball_path }}
+        run: gh release create "$GITHUB_REF_NAME" "$TARBALL_PATH" --repo "$GITHUB_REPOSITORY" --generate-notes
+
+  bump-tap:
+    needs: release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # An explicit bash shell runs with -eo pipefail, so a failed sed fails the step.
+        shell: bash
+    env:
+      TAP_REPOSITORY: gucchisk/homebrew-tap
+      FORMULA_PATH: Formula/waybill.rb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TAP_REPOSITORY }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update formula
+        env:
+          TARBALL_URL: ${{ needs.release.outputs.tarball_url }}
+          TARBALL_SHA256: ${{ needs.release.outputs.tarball_sha256 }}
+        run: |
+          # Replace url/sha256 and drop the old bottle block; brew pr-pull adds a new one.
+          # cat -s squeezes the blank lines left behind by the removed block.
+          # Escape \, " and # so a tag like v1"#rc1 stays inside the Ruby double-quoted string
+          # instead of closing it or starting an #{...} interpolation.
+          ruby_escaped_tarball_url="$(printf '%s' "$TARBALL_URL" | sed -e 's/[\\"#]/\\&/g')"
+          # Then escape \, & and the | delimiter so a tag like v1&rc1 is inserted literally in the sed replacement.
+          sed_escaped_tarball_url="$(printf '%s' "$ruby_escaped_tarball_url" | sed -e 's/[\\&|]/\\&/g')"
+          sed \
+            -e "s|^  url \".*\"|  url \"${sed_escaped_tarball_url}\"|" \
+            -e "s|^  sha256 \".*\"|  sha256 \"${TARBALL_SHA256}\"|" \
+            -e '/^  bottle do$/,/^  end$/d' \
+            "$FORMULA_PATH" | cat -s > "$RUNNER_TEMP/formula.rb"
+          mv "$RUNNER_TEMP/formula.rb" "$FORMULA_PATH"
+          git diff
+
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          branch="waybill-${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -am "waybill ${VERSION}"
+          git push origin "$branch"
+          gh pr create --repo "$TAP_REPOSITORY" --head "$branch" \
+            --title "waybill ${VERSION}" \
+            --body "Update waybill to ${VERSION} (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME})."

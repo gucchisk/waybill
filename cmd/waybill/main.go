@@ -14,6 +14,9 @@ import (
 	"github.com/gucchisk/waybill/internal/usecase"
 )
 
+// version is overwritten at build time with -ldflags "-X main.version=<version>".
+var version = "dev"
+
 func main() {
 	rootCommand, runError := newRootCommand()
 	if err := rootCommand.Execute(); err != nil {
@@ -33,6 +36,7 @@ func newRootCommand() (*cobra.Command, *error) {
 		Short:   "Browse and download container image manifests",
 		Long:    "Show a container image manifest as JSON, follow the objects it references, and download their contents.",
 		Example: "  waybill ghcr.io/regclient/regctl:latest",
+		Version: version,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
 			runError = run(command.Context(), arguments[0], theme)
