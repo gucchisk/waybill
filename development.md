@@ -9,9 +9,8 @@
 To build from source:
 
 ```sh
-git clone https://github.com/gucchisk/waybill.git
-cd waybill
 go build -o waybill ./cmd/waybill
+```
 
 ## Release
 
