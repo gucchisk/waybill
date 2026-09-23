@@ -15,7 +15,13 @@ You can interactively walk from an image index → manifest → config / layer /
 
 ## Installation
 
-Go 1.27.1 or later is required.
+With Homebrew:
+
+```sh
+brew install gucchisk/tap/waybill
+```
+
+With Go (1.27.1 or later is required):
 
 ```sh
 go install github.com/gucchisk/waybill/cmd/waybill@latest
@@ -44,6 +50,7 @@ waybill ghcr.io/regclient/regctl:latest
 | Option | Description |
 | --- | --- |
 | `-h`, `--help` | Show usage |
+| `-v`, `--version` | Show the version |
 | `--theme auto\|dark\|light` | Background brightness used for highlight colors (default: `auto`, which queries the terminal; some terminals, e.g. tmux, may not answer, in which case it falls back to `dark` — use `--theme dark`/`--theme light` to set it explicitly) |
 
 If `<image-ref>` is missing or more than one is given, waybill prints the error message and the usage, then exits with status 1.
@@ -117,5 +124,18 @@ While fetching or downloading, all keys except `Ctrl-c` are ignored.
 go build ./...
 go test ./...
 ```
+
+### Release
+
+Push a `v*` tag to release:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The `release` workflow then runs the tests, creates the GitHub Release, and opens a pull request on [gucchisk/homebrew-tap](https://github.com/gucchisk/homebrew-tap) that points `Formula/waybill.rb` at the new source tarball. On the tap, `brew test-bot` builds bottles for macOS and Linux; adding the `pr-pull` label to the pull request uploads the bottles to the tap's GitHub Release and commits the `bottle do` block.
+
+The workflow needs a `HOMEBREW_TAP_TOKEN` secret: a personal access token with Contents and Pull requests write access to the tap repository.
 
 See [SPEC.md](SPEC.md) for the detailed specification (written in Japanese).
