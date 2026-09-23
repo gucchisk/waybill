@@ -14,7 +14,7 @@
 - `waybill <image-ref>`(例: `waybill ghcr.io/regclient/regctl:latest`)
 - 引数が`<image-ref>`ひとつ以外の場合はエラーメッセージと使い方(usage)を表示して異常終了する(終了コード1)
 - `-h` / `--help`で使い方を表示する
-- `-v` / `--version`でバージョンを表示する(ビルド時に`-ldflags "-X main.version=<version>"`で埋め込む。未指定の場合は`dev`)
+- `-v` / `--version`でバージョンを表示する(ビルド時に`-ldflags "-X main.version=<version>"`で埋め込んだ値を優先する。未指定の場合はGoのビルド情報にあるモジュールバージョン(`go install ...@<version>`ならそのタグ、リポジトリ内でビルドした場合はVCS情報から作られる疑似バージョン)を使い、それもなければ`dev`)
 - `--theme auto|dark|light`で背景の明暗に応じたハイライト色を選択する(既定値は`auto`)
 - 認証・証明書はDockerの設定(`~/.docker/config.json`等)をregclient経由で利用する
 

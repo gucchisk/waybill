@@ -22,12 +22,6 @@ With Homebrew:
 brew install gucchisk/tap/waybill
 ```
 
-With Go (1.27.1 or later is required):
-
-```sh
-go install github.com/gucchisk/waybill/cmd/waybill@latest
-```
-
 ## Usage
 
 ```sh

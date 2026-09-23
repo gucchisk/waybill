@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 
@@ -16,6 +17,19 @@ import (
 
 // version is overwritten at build time with -ldflags "-X main.version=<version>".
 var version = "dev"
+
+// resolveVersion prefers the version embedded with -ldflags (e.g. by the Homebrew formula),
+// then the module version recorded by the Go toolchain (e.g. by go install ...@v1.2.3).
+func resolveVersion(ldflagsVersion string, readBuildInfo func() (*debug.BuildInfo, bool)) string {
+	if ldflagsVersion != "dev" {
+		return ldflagsVersion
+	}
+	buildInfo, ok := readBuildInfo()
+	if !ok || buildInfo.Main.Version == "" || buildInfo.Main.Version == "(devel)" {
+		return ldflagsVersion
+	}
+	return buildInfo.Main.Version
+}
 
 func main() {
 	rootCommand, runError := newRootCommand()
@@ -36,7 +50,7 @@ func newRootCommand() (*cobra.Command, *error) {
 		Short:   "Browse and download container image manifests",
 		Long:    "Show a container image manifest as JSON, follow the objects it references, and download their contents.",
 		Example: "  waybill ghcr.io/regclient/regctl:latest",
-		Version: version,
+		Version: resolveVersion(version, debug.ReadBuildInfo),
 		Args:    cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
 			runError = run(command.Context(), arguments[0], theme)
