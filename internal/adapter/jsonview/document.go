@@ -33,9 +33,28 @@ type Span struct {
 }
 
 // Line is one displayed line. SelectableIndex is the index of the innermost selectable object the line belongs to (-1 if none).
+// ObjectIndex is the index of the innermost non-empty object the line belongs to (-1 if none).
 type Line struct {
 	Spans           []Span
 	SelectableIndex int
+	ObjectIndex     int
+}
+
+// ObjectRange is a non-empty object that can be folded. The line range is inclusive on both ends.
+// FoldedSpans is the line shown instead of the whole object when it is folded (e.g. `"config": {...},`).
+type ObjectRange struct {
+	StartLine   int
+	EndLine     int
+	FoldedSpans []Span
+}
+
+// DisplayLine is a line actually shown on screen after folding.
+// DocumentLine is the index in Document.Lines (the start line for a folded object).
+// FoldedObjectIndex is the index of the folded object this line stands for (-1 if the line is not folded).
+type DisplayLine struct {
+	Spans             []Span
+	DocumentLine      int
+	FoldedObjectIndex int
 }
 
 // SelectableObject is an object that has mediaType and digest. The line range is inclusive on both ends.
@@ -48,6 +67,23 @@ type SelectableObject struct {
 type Document struct {
 	Lines             []Line
 	SelectableObjects []SelectableObject
+	Objects           []ObjectRange
+}
+
+// DisplayLines returns the lines to show when the objects in foldedObjectIndexes are folded.
+// An object folded inside another folded object stays hidden.
+func (document *Document) DisplayLines(foldedObjectIndexes map[int]bool) []DisplayLine {
+	displayLines := make([]DisplayLine, 0, len(document.Lines))
+	for lineNumber := 0; lineNumber < len(document.Lines); lineNumber++ {
+		line := document.Lines[lineNumber]
+		if objectIndex := line.ObjectIndex; objectIndex >= 0 && foldedObjectIndexes[objectIndex] && document.Objects[objectIndex].StartLine == lineNumber {
+			displayLines = append(displayLines, DisplayLine{Spans: document.Objects[objectIndex].FoldedSpans, DocumentLine: lineNumber, FoldedObjectIndex: objectIndex})
+			lineNumber = document.Objects[objectIndex].EndLine
+			continue
+		}
+		displayLines = append(displayLines, DisplayLine{Spans: line.Spans, DocumentLine: lineNumber, FoldedObjectIndex: -1})
+	}
+	return displayLines
 }
 
 // SelectableObjectAt returns the innermost selectable object that line belongs to.
@@ -170,6 +206,8 @@ func quoteJSONString(value string) string {
 
 type documentBuilder struct {
 	document Document
+	// openObjectIndexes is the stack of objects being rendered; the last one is the innermost.
+	openObjectIndexes []int
 }
 
 // render appends node to lines. linePrefix is the indentation and key placed at the start of the first line.
@@ -190,6 +228,12 @@ func (builder *documentBuilder) render(target *node, linePrefix []Span, depth in
 			return
 		}
 		startLine := len(builder.document.Lines)
+		objectIndex := len(builder.document.Objects)
+		builder.document.Objects = append(builder.document.Objects, ObjectRange{
+			StartLine:   startLine,
+			FoldedSpans: joinSpans(linePrefix, Span{Text: "{...}" + comma, Kind: SpanPunctuation}),
+		})
+		builder.openObjectIndexes = append(builder.openObjectIndexes, objectIndex)
 		builder.appendLine(linePrefix, Span{Text: "{", Kind: SpanPunctuation})
 		for memberIndex, child := range target.members {
 			childPrefix := []Span{
@@ -200,6 +244,8 @@ func (builder *documentBuilder) render(target *node, linePrefix []Span, depth in
 			builder.render(child.value, childPrefix, depth+1, memberIndex < len(target.members)-1)
 		}
 		builder.appendLine([]Span{closingIndent}, Span{Text: "}" + comma, Kind: SpanPunctuation})
+		builder.openObjectIndexes = builder.openObjectIndexes[:len(builder.openObjectIndexes)-1]
+		builder.document.Objects[objectIndex].EndLine = len(builder.document.Lines) - 1
 		builder.registerIfSelectable(target, startLine, len(builder.document.Lines)-1)
 
 	case nodeArray:
@@ -217,6 +263,15 @@ func (builder *documentBuilder) render(target *node, linePrefix []Span, depth in
 }
 
 func (builder *documentBuilder) appendLine(linePrefix []Span, rest ...Span) {
+	objectIndex := -1
+	if len(builder.openObjectIndexes) > 0 {
+		objectIndex = builder.openObjectIndexes[len(builder.openObjectIndexes)-1]
+	}
+	builder.document.Lines = append(builder.document.Lines, Line{Spans: joinSpans(linePrefix, rest...), SelectableIndex: -1, ObjectIndex: objectIndex})
+}
+
+// joinSpans returns linePrefix followed by the non-empty spans of rest, as a new slice.
+func joinSpans(linePrefix []Span, rest ...Span) []Span {
 	spans := make([]Span, 0, len(linePrefix)+len(rest))
 	spans = append(spans, linePrefix...)
 	for _, span := range rest {
@@ -224,7 +279,7 @@ func (builder *documentBuilder) appendLine(linePrefix []Span, rest ...Span) {
 			spans = append(spans, span)
 		}
 	}
-	builder.document.Lines = append(builder.document.Lines, Line{Spans: spans, SelectableIndex: -1})
+	return spans
 }
 
 // registerIfSelectable registers an object as selectable if it has string mediaType and digest.

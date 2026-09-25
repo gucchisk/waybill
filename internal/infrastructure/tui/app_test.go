@@ -232,3 +232,43 @@ func TestEscapeOnRootViewQuits(t *testing.T) {
 		t.Error("Esc on root view must quit")
 	}
 }
+
+func TestSpaceFoldsAndUnfoldsObject(t *testing.T) {
+	app, screen, _ := newTestApp(t)
+	for range 5 { // line 5: inside manifests[0]
+		app.handleKey(keyPress(tcell.KeyDown))
+	}
+	if !strings.Contains(app.helpText(), "Space:fold") {
+		t.Errorf("Space:fold must be shown inside an object: %q", app.helpText())
+	}
+	unfoldedLineCount := len(app.currentView().displayLines)
+
+	app.handleKey(runePress(' '))
+	view := app.currentView()
+	if view.cursorLine != 4 || len(view.displayLines) != unfoldedLineCount-4 {
+		t.Fatalf("cursorLine=%d displayLines=%d, want the cursor on the folded line", view.cursorLine, len(view.displayLines))
+	}
+	app.draw()
+	if rowText := screenRowText(screen, 5); rowText != "    {...}" {
+		t.Errorf("folded row = %q", rowText)
+	}
+	helpText := app.helpText()
+	if !strings.Contains(helpText, "Space:unfold") || !strings.Contains(helpText, "Enter:view JSON") {
+		t.Errorf("on a folded selectable object, Space:unfold and its actions must be shown: %q", helpText)
+	}
+
+	app.handleKey(runePress(' '))
+	if view.cursorLine != 4 || len(view.displayLines) != unfoldedLineCount {
+		t.Errorf("cursorLine=%d displayLines=%d after unfolding", view.cursorLine, len(view.displayLines))
+	}
+}
+
+func screenRowText(screen tcell.SimulationScreen, row int) string {
+	width, _ := screen.Size()
+	var builder strings.Builder
+	for x := range width {
+		text, _, _ := screen.Get(x, row)
+		builder.WriteString(text)
+	}
+	return strings.TrimRight(builder.String(), " ")
+}
