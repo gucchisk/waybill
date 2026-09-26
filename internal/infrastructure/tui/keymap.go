@@ -20,7 +20,6 @@ const (
 	commandQuit
 )
 
-// commandFor converts a key input into a command. Both arrow keys and Emacs bindings are supported.
 func commandFor(event *tcell.EventKey) command {
 	switch event.Key() {
 	case tcell.KeyUp, tcell.KeyCtrlP:
