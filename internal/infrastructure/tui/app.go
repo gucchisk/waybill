@@ -163,6 +163,8 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 		app.executeOnSelectedObject(domain.ActionView)
 	case commandDownload:
 		app.executeOnSelectedObject(domain.ActionDownload)
+	case commandCopyValue:
+		app.copyCursorLineValue()
 	case commandBack:
 		if len(app.views) == 1 {
 			return true
@@ -170,6 +172,17 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 		app.views = app.views[:len(app.views)-1]
 	}
 	return false
+}
+
+// copyCursorLineValue copies the string or number value on the cursor line to the system clipboard (OSC 52 via tcell).
+func (app *App) copyCursorLineValue() {
+	view := app.currentView()
+	value, ok := view.document.CopyableValueAt(view.cursorDocumentLine())
+	if !ok {
+		return
+	}
+	app.screen.SetClipboard([]byte(value))
+	app.statusMessage = "Copied to clipboard"
 }
 
 // availableActions returns the selectable object under the cursor and the actions allowed for its mediaType.

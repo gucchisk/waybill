@@ -15,6 +15,7 @@ const (
 	commandToggleFold
 	commandView
 	commandDownload
+	commandCopyValue
 	commandBack
 	commandQuit
 )
@@ -63,6 +64,8 @@ func commandForRune(event *tcell.EventKey) command {
 		return commandBack
 	case 'd':
 		return commandDownload
+	case 'c':
+		return commandCopyValue
 	case ' ':
 		return commandToggleFold
 	}

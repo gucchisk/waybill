@@ -98,6 +98,28 @@ func (document *Document) SelectableObjectAt(line int) (SelectableObject, bool) 
 	return document.SelectableObjects[index], true
 }
 
+// CopyableValueAt returns the value on line for copying. Only string and number values can be copied;
+// a string is returned without quotes. It returns false for other lines (objects, arrays, true / false / null, closing lines).
+func (document *Document) CopyableValueAt(line int) (string, bool) {
+	if line < 0 || line >= len(document.Lines) {
+		return "", false
+	}
+	for _, span := range document.Lines[line].Spans {
+		switch span.Kind {
+		case SpanNumber:
+			return span.Text, true
+		case SpanString:
+			// Span.Text is JSON-encoded (quoted and escaped), so decode it back to the raw string.
+			var value string
+			if err := json.Unmarshal([]byte(span.Text), &value); err != nil {
+				return "", false
+			}
+			return value, true
+		}
+	}
+	return "", false
+}
+
 // Parse formats raw JSON into a Document.
 func Parse(raw []byte) (*Document, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))

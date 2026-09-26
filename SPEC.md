@@ -35,6 +35,11 @@
     - 畳む・戻す操作の後、カーソルはそのobjectの先頭行に置く
     - 畳んだ行でもEnter / dはそのobjectに対して実行できる
     - 最下行のキー表示は、畳める場合は`Space:fold`、畳んだ行では`Space:unfold`とする
+- cでカーソル行の値をクリップボードにコピーする(OSC 52。端末側でクリップボードへのアクセスを許可しておく必要がある。例: iTerm2の「Applications in terminal may access clipboard」、tmuxの`set-clipboard`)
+    - コピーできるのは値が文字列または数値の行のみ。文字列はクォートを外した中身、数値はそのままコピーする
+    - それ以外の行(object・配列の行、畳んだ行、`true` / `false` / `null`、`}` / `]`の行)では無効
+    - コピーしたらステータス行に`Copied to clipboard`と表示する
+    - 最下行のキー表示は、コピーできる行でのみ`c:copy`とする
 - 表示(Enter)すると、取得したJSONを新しい画面で表示する(入れ子で辿れる)
 - 表示できるサイズの上限は32MiB
 - 取得・ダウンロード中はCtrl-C以外のキー操作を受け付けない
@@ -47,6 +52,7 @@
 | ページ上 / ページ下 | PgUp / PgDn、Alt-v / Ctrl-v |
 | 先頭 / 末尾 | Home / End、Alt-< / Alt-> |
 | objectを畳む / 戻す | Space |
+| 値をコピー | c |
 | 表示(json) | Enter |
 | ダウンロード | d |
 | 前の画面へ戻る | Esc、Ctrl-g、q |

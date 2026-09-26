@@ -136,6 +136,10 @@ func (app *App) helpText() string {
 			keyHelps = append(keyHelps, "Space:fold")
 		}
 	}
+	view := app.currentView()
+	if _, isCopyable := view.document.CopyableValueAt(view.cursorDocumentLine()); isCopyable {
+		keyHelps = append(keyHelps, "c:copy")
+	}
 	if slices.Contains(actions, domain.ActionView) {
 		keyHelps = append(keyHelps, "Enter:view JSON")
 	}
