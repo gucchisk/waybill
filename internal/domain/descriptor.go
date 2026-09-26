@@ -2,7 +2,6 @@ package domain
 
 import "strings"
 
-// MediaType represents an OCI/Docker mediaType.
 type MediaType string
 
 const (
@@ -26,14 +25,12 @@ const (
 	MediaTypeCosignSimpleSign MediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
 )
 
-// Descriptor is the information that points to content in a registry.
 type Descriptor struct {
 	MediaType MediaType
 	Digest    string
 	Size      int64
 }
 
-// IsManifest reports whether the content (index / manifest) should be fetched through the manifest API.
 func (mediaType MediaType) IsManifest() bool {
 	switch mediaType {
 	case MediaTypeOCIImageIndex, MediaTypeOCIImageManifest,
@@ -47,7 +44,6 @@ func (mediaType MediaType) isJSON() bool {
 	return strings.HasSuffix(string(mediaType), "+json")
 }
 
-// FileExtension returns the file extension used for downloads, including the leading dot.
 func (mediaType MediaType) FileExtension() string {
 	switch mediaType {
 	case MediaTypeOCILayerTarGzip, MediaTypeDockerLayerGzip:
@@ -63,7 +59,6 @@ func (mediaType MediaType) FileExtension() string {
 	return ".bin"
 }
 
-// DownloadFileName returns the download file name derived from the digest (e.g. sha256-xxxx.tar.gz).
 func (descriptor Descriptor) DownloadFileName() string {
 	return strings.ReplaceAll(descriptor.Digest, ":", "-") + descriptor.MediaType.FileExtension()
 }

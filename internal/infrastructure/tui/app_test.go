@@ -154,8 +154,6 @@ func TestSelectedObjectHasBackground(t *testing.T) {
 		_, background, attributes := style.Decompose()
 		return background, attributes&tcell.AttrReverse != 0
 	}
-	// The cursor is on line 4 (the "{" of manifests[0]). The object spans lines 4-8, shown at rows 5-9 on screen because of the one-line header.
-	// The cursor line (row 5) is reversed; the other lines of the object have the selected background.
 	if _, isReversed := styleAt(5); !isReversed {
 		t.Error("the cursor line must be drawn in reverse video")
 	}
@@ -196,7 +194,6 @@ func TestCursorLineIsHighlightedEvenWithoutSelectableObject(t *testing.T) {
 	app, screen, _ := newTestApp(t)
 	app.draw()
 
-	// The cursor is on line 0 (the root "{"), which is not inside a selectable object.
 	_, style, _ := screen.Get(10, 1)
 	_, _, attributes := style.Decompose()
 	if attributes&tcell.AttrReverse == 0 {

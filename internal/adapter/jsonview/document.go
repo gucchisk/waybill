@@ -1,5 +1,3 @@
-// Package jsonview converts JSON into a human-readable, line-based display model.
-// It keeps the key order of the original JSON and detects objects that have both mediaType and digest as selectable.
 package jsonview
 
 import (
@@ -16,7 +14,6 @@ import (
 
 const indentUnit = "  "
 
-// SpanKind is the kind of a text span, used for coloring.
 type SpanKind int
 
 const (
@@ -32,32 +29,24 @@ type Span struct {
 	Kind SpanKind
 }
 
-// Line is one displayed line. SelectableIndex is the index of the innermost selectable object the line belongs to (-1 if none).
-// ObjectIndex is the index of the innermost non-empty object the line belongs to (-1 if none).
 type Line struct {
 	Spans           []Span
 	SelectableIndex int
 	ObjectIndex     int
 }
 
-// ObjectRange is a non-empty object that can be folded. The line range is inclusive on both ends.
-// FoldedSpans is the line shown instead of the whole object when it is folded (e.g. `"config": {...},`).
 type ObjectRange struct {
 	StartLine   int
 	EndLine     int
 	FoldedSpans []Span
 }
 
-// DisplayLine is a line actually shown on screen after folding.
-// DocumentLine is the index in Document.Lines (the start line for a folded object).
-// FoldedObjectIndex is the index of the folded object this line stands for (-1 if the line is not folded).
 type DisplayLine struct {
 	Spans             []Span
 	DocumentLine      int
 	FoldedObjectIndex int
 }
 
-// SelectableObject is an object that has mediaType and digest. The line range is inclusive on both ends.
 type SelectableObject struct {
 	Descriptor domain.Descriptor
 	StartLine  int
@@ -70,8 +59,6 @@ type Document struct {
 	Objects           []ObjectRange
 }
 
-// DisplayLines returns the lines to show when the objects in foldedObjectIndexes are folded.
-// An object folded inside another folded object stays hidden.
 func (document *Document) DisplayLines(foldedObjectIndexes map[int]bool) []DisplayLine {
 	displayLines := make([]DisplayLine, 0, len(document.Lines))
 	for lineNumber := 0; lineNumber < len(document.Lines); lineNumber++ {
@@ -86,7 +73,6 @@ func (document *Document) DisplayLines(foldedObjectIndexes map[int]bool) []Displ
 	return displayLines
 }
 
-// SelectableObjectAt returns the innermost selectable object that line belongs to.
 func (document *Document) SelectableObjectAt(line int) (SelectableObject, bool) {
 	if line < 0 || line >= len(document.Lines) {
 		return SelectableObject{}, false
@@ -98,8 +84,6 @@ func (document *Document) SelectableObjectAt(line int) (SelectableObject, bool) 
 	return document.SelectableObjects[index], true
 }
 
-// CopyableValueAt returns the value on line for copying. Only string and number values can be copied;
-// a string is returned without quotes. It returns false for other lines (objects, arrays, true / false / null, closing lines).
 func (document *Document) CopyableValueAt(line int) (string, bool) {
 	if line < 0 || line >= len(document.Lines) {
 		return "", false
@@ -120,7 +104,6 @@ func (document *Document) CopyableValueAt(line int) (string, bool) {
 	return "", false
 }
 
-// Parse formats raw JSON into a Document.
 func Parse(raw []byte) (*Document, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
@@ -227,12 +210,10 @@ func quoteJSONString(value string) string {
 }
 
 type documentBuilder struct {
-	document Document
-	// openObjectIndexes is the stack of objects being rendered; the last one is the innermost.
+	document          Document
 	openObjectIndexes []int
 }
 
-// render appends node to lines. linePrefix is the indentation and key placed at the start of the first line.
 func (builder *documentBuilder) render(target *node, linePrefix []Span, depth int, hasNextSibling bool) {
 	comma := ""
 	if hasNextSibling {
@@ -292,7 +273,6 @@ func (builder *documentBuilder) appendLine(linePrefix []Span, rest ...Span) {
 	builder.document.Lines = append(builder.document.Lines, Line{Spans: joinSpans(linePrefix, rest...), SelectableIndex: -1, ObjectIndex: objectIndex})
 }
 
-// joinSpans returns linePrefix followed by the non-empty spans of rest, as a new slice.
 func joinSpans(linePrefix []Span, rest ...Span) []Span {
 	spans := make([]Span, 0, len(linePrefix)+len(rest))
 	spans = append(spans, linePrefix...)
@@ -304,7 +284,6 @@ func joinSpans(linePrefix []Span, rest ...Span) []Span {
 	return spans
 }
 
-// registerIfSelectable registers an object as selectable if it has string mediaType and digest.
 func (builder *documentBuilder) registerIfSelectable(object *node, startLine, endLine int) {
 	var mediaType, digestValue string
 	var size int64
@@ -332,8 +311,6 @@ func (builder *documentBuilder) registerIfSelectable(object *node, startLine, en
 	})
 }
 
-// assignSelectableIndexes assigns the innermost selectable object to each line.
-// Painting from the widest range first lets inner objects overwrite outer ones.
 func (builder *documentBuilder) assignSelectableIndexes() {
 	objects := builder.document.SelectableObjects
 	paintOrder := make([]int, len(objects))
