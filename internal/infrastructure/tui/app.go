@@ -17,11 +17,14 @@ type Dependencies struct {
 	DownloadContent *usecase.DownloadContent
 }
 
+// contentView is one screen of JSON. cursorLine and topLine are indexes into displayLines, which reflects folding.
 type contentView struct {
-	title      string
-	document   *jsonview.Document
-	cursorLine int
-	topLine    int
+	title               string
+	document            *jsonview.Document
+	foldedObjectIndexes map[int]bool
+	displayLines        []jsonview.DisplayLine
+	cursorLine          int
+	topLine             int
 }
 
 type App struct {
@@ -57,10 +60,47 @@ func newContentView(descriptor domain.Descriptor, content []byte) (*contentView,
 	if err != nil {
 		return nil, fmt.Errorf("%s is not viewable as JSON: %w", descriptor.Digest, err)
 	}
+	foldedObjectIndexes := map[int]bool{}
 	return &contentView{
-		title:    fmt.Sprintf("%s  %s", descriptor.MediaType, descriptor.Digest),
-		document: document,
+		title:               fmt.Sprintf("%s  %s", descriptor.MediaType, descriptor.Digest),
+		document:            document,
+		foldedObjectIndexes: foldedObjectIndexes,
+		displayLines:        document.DisplayLines(foldedObjectIndexes),
 	}, nil
+}
+
+// cursorDocumentLine returns the line in the document that the cursor is on (the start line for a folded object).
+func (view *contentView) cursorDocumentLine() int {
+	return view.displayLines[view.cursorLine].DocumentLine
+}
+
+// foldTarget returns the object that Space toggles and whether it is folded now.
+// On a folded line it is the folded object; otherwise it is the innermost object containing the cursor line.
+func (view *contentView) foldTarget() (objectIndex int, isFolded bool) {
+	displayLine := view.displayLines[view.cursorLine]
+	if displayLine.FoldedObjectIndex >= 0 {
+		return displayLine.FoldedObjectIndex, true
+	}
+	return view.document.Lines[displayLine.DocumentLine].ObjectIndex, false
+}
+
+// toggleFold folds or unfolds the object under the cursor and keeps the cursor on the object's first line.
+func (view *contentView) toggleFold() {
+	objectIndex, isFolded := view.foldTarget()
+	if objectIndex < 0 {
+		return
+	}
+	if isFolded {
+		delete(view.foldedObjectIndexes, objectIndex)
+	} else {
+		view.foldedObjectIndexes[objectIndex] = true
+	}
+	view.displayLines = view.document.DisplayLines(view.foldedObjectIndexes)
+
+	startLine := view.document.Objects[objectIndex].StartLine
+	view.cursorLine = slices.IndexFunc(view.displayLines, func(displayLine jsonview.DisplayLine) bool {
+		return displayLine.DocumentLine == startLine
+	})
 }
 
 func (app *App) Run() {
@@ -100,7 +140,7 @@ func (app *App) currentView() *contentView {
 
 func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 	view := app.currentView()
-	lastLine := len(view.document.Lines) - 1
+	lastLine := len(view.displayLines) - 1
 	pageSize := max(app.bodyHeight()-1, 1)
 	app.statusMessage = ""
 
@@ -117,6 +157,8 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 		view.cursorLine = 0
 	case commandBottom:
 		view.cursorLine = lastLine
+	case commandToggleFold:
+		view.toggleFold()
 	case commandView:
 		app.executeOnSelectedObject(domain.ActionView)
 	case commandDownload:
@@ -134,7 +176,7 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 // It returns no actions when the cursor is not inside a selectable object.
 func (app *App) availableActions() (jsonview.SelectableObject, []domain.Action) {
 	view := app.currentView()
-	object, ok := view.document.SelectableObjectAt(view.cursorLine)
+	object, ok := view.document.SelectableObjectAt(view.cursorDocumentLine())
 	if !ok {
 		return jsonview.SelectableObject{}, nil
 	}

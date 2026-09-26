@@ -87,3 +87,50 @@ func TestParseInvalidJSON(t *testing.T) {
 		t.Error("expected error")
 	}
 }
+
+func displayLineTexts(displayLines []DisplayLine) []string {
+	texts := make([]string, len(displayLines))
+	for index, displayLine := range displayLines {
+		texts[index] = lineText(Line{Spans: displayLine.Spans})
+	}
+	return texts
+}
+
+func TestDisplayLinesFoldObject(t *testing.T) {
+	document, err := Parse([]byte(sampleManifest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	configIndex := document.Lines[4].ObjectIndex // the "mediaType" line inside config
+	if configIndex < 0 || document.Objects[configIndex].StartLine != 3 || document.Objects[configIndex].EndLine != 7 {
+		t.Fatalf("config object = %d %+v", configIndex, document.Objects)
+	}
+
+	displayLines := document.DisplayLines(map[int]bool{configIndex: true})
+	texts := displayLineTexts(displayLines)
+	if texts[3] != `  "config": {...},` || texts[4] != `  "layers": [` {
+		t.Errorf("folded config must be one line: %q", texts[:5])
+	}
+	if displayLines[3].FoldedObjectIndex != configIndex || displayLines[3].DocumentLine != 3 || displayLines[4].DocumentLine != 8 {
+		t.Errorf("unexpected display lines: %+v", displayLines[3:5])
+	}
+	if len(displayLines) != len(document.Lines)-4 {
+		t.Errorf("got %d display lines, want %d", len(displayLines), len(document.Lines)-4)
+	}
+}
+
+func TestDisplayLinesFoldRootAndNested(t *testing.T) {
+	document, err := Parse([]byte(sampleManifest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootIndex := document.Lines[0].ObjectIndex
+	configIndex := document.Lines[4].ObjectIndex
+	texts := displayLineTexts(document.DisplayLines(map[int]bool{rootIndex: true, configIndex: true}))
+	if len(texts) != 1 || texts[0] != "{...}" {
+		t.Errorf("folded root must hide everything including folded children: %q", texts)
+	}
+	if document.Lines[1].ObjectIndex != rootIndex {
+		t.Error("a scalar member must belong to its enclosing object")
+	}
+}

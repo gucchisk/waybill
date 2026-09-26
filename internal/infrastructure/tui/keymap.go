@@ -12,6 +12,7 @@ const (
 	commandPageDown
 	commandTop
 	commandBottom
+	commandToggleFold
 	commandView
 	commandDownload
 	commandBack
@@ -62,6 +63,8 @@ func commandForRune(event *tcell.EventKey) command {
 		return commandBack
 	case 'd':
 		return commandDownload
+	case ' ':
+		return commandToggleFold
 	}
 	return commandNone
 }

@@ -80,16 +80,17 @@ func (app *App) keepCursorVisible(view *contentView) {
 }
 
 func (app *App) drawBody(view *contentView, width int) {
-	selectedObject, hasSelectedObject := view.document.SelectableObjectAt(view.cursorLine)
+	selectedObject, hasSelectedObject := view.document.SelectableObjectAt(view.cursorDocumentLine())
 
 	for row := 0; row < app.bodyHeight(); row++ {
-		lineNumber := view.topLine + row
-		if lineNumber >= len(view.document.Lines) {
+		displayLineNumber := view.topLine + row
+		if displayLineNumber >= len(view.displayLines) {
 			return
 		}
+		displayLine := view.displayLines[displayLineNumber]
 		screenRow := row + 1
-		isCursorLine := lineNumber == view.cursorLine
-		isSelected := hasSelectedObject && lineNumber >= selectedObject.StartLine && lineNumber <= selectedObject.EndLine
+		isCursorLine := displayLineNumber == view.cursorLine
+		isSelected := hasSelectedObject && displayLine.DocumentLine >= selectedObject.StartLine && displayLine.DocumentLine <= selectedObject.EndLine
 
 		rowStyle := tcell.StyleDefault
 		switch {
@@ -102,7 +103,7 @@ func (app *App) drawBody(view *contentView, width int) {
 		}
 
 		x := 0
-		for _, span := range view.document.Lines[lineNumber].Spans {
+		for _, span := range displayLine.Spans {
 			style := rowStyle
 			if !isCursorLine {
 				style = spanStyles[span.Kind]
@@ -128,6 +129,13 @@ func (app *App) drawFooter(row, width int) {
 func (app *App) helpText() string {
 	_, actions := app.availableActions()
 	keyHelps := []string{"↑↓/C-p C-n:move", "PgUp PgDn/M-v C-v:page"}
+	if objectIndex, isFolded := app.currentView().foldTarget(); objectIndex >= 0 {
+		if isFolded {
+			keyHelps = append(keyHelps, "Space:unfold")
+		} else {
+			keyHelps = append(keyHelps, "Space:fold")
+		}
+	}
 	if slices.Contains(actions, domain.ActionView) {
 		keyHelps = append(keyHelps, "Enter:view JSON")
 	}
