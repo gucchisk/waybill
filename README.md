@@ -10,6 +10,7 @@ You can interactively walk from an image index → manifest → config / layer /
 - Highlights the whole cursor line by swapping the terminal's foreground and background colors (white on gray on light backgrounds), like a row selection in a list
 - Highlights (with a subtler background color, chosen for dark or light terminal backgrounds) the innermost object under the cursor that has both `mediaType` and `digest`
 - Folds the object under the cursor into `{...}` with `Space`, and unfolds it with `Space` again
+- Copies the string or number value on the cursor line to the clipboard with `c` (via OSC 52)
 - Opens the selected object on a new screen (nestable) with `Enter`, or downloads it to the current directory with `d`
 - Shows only the keys usable right now at the bottom of the screen (e.g. `Enter` / `d` appear only when the cursor is inside an object that supports them)
 - Supports both arrow keys and Emacs key bindings
@@ -50,7 +51,8 @@ If `<image-ref>` is missing or more than one is given, waybill prints the error 
 3. Press `Enter` to open the fetched JSON on a new screen (View). Press `Esc` / `q` to go back.
 4. Press `d` to save the content to the current directory (Download). The saved path is shown in the status line.
 5. Press `Space` to fold the innermost object containing the cursor line into one line such as `"config": {...},`. Press `Space` on that line to unfold it. `Enter` / `d` also work on a folded object.
-6. Keys for actions the mediaType does not support are ignored (see [Actions per mediaType](#actions-per-mediatype)).
+6. Press `c` to copy the value on the cursor line to the clipboard. Only string and number values can be copied; a string is copied without quotes.
+7. Keys for actions the mediaType does not support are ignored (see [Actions per mediaType](#actions-per-mediatype)).
 
 Objects without a `digest` (such as the root manifest) cannot be selected because there is no way to tell where to fetch them from.
 
@@ -62,12 +64,15 @@ Objects without a `digest` (such as the root manifest) cannot be selected becaus
 | Page up / Page down | `PgUp` / `PgDn`, `Alt-v` / `Ctrl-v` |
 | Top / Bottom | `Home` / `End`, `Alt-<` / `Alt->` |
 | Fold / unfold object | `Space` |
+| Copy value | `c` |
 | View JSON | `Enter` |
 | Download | `d` |
 | Go back | `Esc`, `Ctrl-g`, `q` |
 | Quit | `Ctrl-c` (`Esc` / `q` also quit on the first screen) |
 
 While fetching or downloading, all keys except `Ctrl-c` are ignored.
+
+Copying uses the OSC 52 escape sequence, so the terminal must allow clipboard access (e.g. iTerm2: "Applications in terminal may access clipboard"; tmux: `set-clipboard on`).
 
 ## Download
 

@@ -272,3 +272,29 @@ func screenRowText(screen tcell.SimulationScreen, row int) string {
 	}
 	return strings.TrimRight(builder.String(), " ")
 }
+
+func TestCKeyCopiesCursorLineValue(t *testing.T) {
+	app, screen, _ := newTestApp(t)
+	app.handleKey(keyPress(tcell.KeyDown)) // line 1: "schemaVersion": 2
+	app.handleKey(keyPress(tcell.KeyDown)) // line 2: "mediaType": "..."
+	if !strings.Contains(app.helpText(), "c:copy") {
+		t.Errorf("c:copy must be shown on a value line: %q", app.helpText())
+	}
+	app.handleKey(runePress('c'))
+	if clipboard := string(screen.GetClipboardData()); clipboard != "application/vnd.oci.image.index.v1+json" {
+		t.Errorf("clipboard = %q", clipboard)
+	}
+	if app.statusMessage != "Copied to clipboard" {
+		t.Errorf("statusMessage = %q", app.statusMessage)
+	}
+
+	app.handleKey(keyPress(tcell.KeyDown))
+	app.handleKey(keyPress(tcell.KeyDown)) // line 4: `{` of manifests[0]
+	if strings.Contains(app.helpText(), "c:copy") {
+		t.Errorf("c:copy must not be shown on an object line: %q", app.helpText())
+	}
+	app.handleKey(runePress('c'))
+	if clipboard := string(screen.GetClipboardData()); clipboard != "application/vnd.oci.image.index.v1+json" {
+		t.Errorf("c on an object line must not change the clipboard: %q", clipboard)
+	}
+}

@@ -134,3 +134,33 @@ func TestDisplayLinesFoldRootAndNested(t *testing.T) {
 		t.Error("a scalar member must belong to its enclosing object")
 	}
 }
+
+func TestCopyableValueAt(t *testing.T) {
+	document, err := Parse([]byte(`{"name":"a\"b","size":10,"ok":true,"none":null,"labels":{"k":[1,"x"]},"empty":[]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		line          int
+		expectedValue string
+		expectedOK    bool
+	}{
+		{0, "", false}, // root `{`
+		{1, `a"b`, true},
+		{2, "10", true},
+		{3, "", false}, // true
+		{4, "", false}, // null
+		{5, "", false}, // object `{`
+		{6, "", false}, // array `[`
+		{7, "1", true},
+		{8, "x", true},
+		{9, "", false},  // closing `]`
+		{11, "", false}, // empty array `[]`
+	}
+	for _, test := range tests {
+		value, ok := document.CopyableValueAt(test.line)
+		if value != test.expectedValue || ok != test.expectedOK {
+			t.Errorf("CopyableValueAt(%d) = %q, %v; want %q, %v", test.line, value, ok, test.expectedValue, test.expectedOK)
+		}
+	}
+}
