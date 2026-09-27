@@ -102,26 +102,26 @@ func TestEnterViewsAndDKeyDownloadsSelectableObject(t *testing.T) {
 	}
 }
 
-func TestHelpTextShowsOnlyAvailableKeys(t *testing.T) {
+func TestKeyMapTextShowsOnlyAvailableKeys(t *testing.T) {
 	app, _, _ := newTestApp(t)
-	helpText := app.helpText()
-	if strings.Contains(helpText, "Enter:") || strings.Contains(helpText, "d:download") {
-		t.Errorf("outside a selectable object, action keys must not be shown: %q", helpText)
+	keyMapText := app.keyMapText()
+	if strings.Contains(keyMapText, "Enter:") || strings.Contains(keyMapText, "d:download") {
+		t.Errorf("outside a selectable object, action keys must not be shown: %q", keyMapText)
 	}
-	if !strings.Contains(helpText, "Esc/q:quit") {
-		t.Errorf("on the root view, Esc/q must be shown as quit: %q", helpText)
+	if !strings.Contains(keyMapText, "Esc/q:quit") {
+		t.Errorf("on the root view, Esc/q must be shown as quit: %q", keyMapText)
 	}
 
 	for range 4 { // line 4: inside manifests[0]
 		app.handleKey(keyPress(tcell.KeyDown))
 	}
-	helpText = app.helpText()
-	if !strings.Contains(helpText, "Enter:view JSON") || !strings.Contains(helpText, "d:download") {
-		t.Errorf("inside a manifest object, Enter and d must be shown: %q", helpText)
+	keyMapText = app.keyMapText()
+	if !strings.Contains(keyMapText, "Enter:view JSON") || !strings.Contains(keyMapText, "d:download") {
+		t.Errorf("inside a manifest object, Enter and d must be shown: %q", keyMapText)
 	}
 }
 
-func TestHelpTextHidesUnsupportedAction(t *testing.T) {
+func TestKeyMapTextHidesUnsupportedAction(t *testing.T) {
 	app, _, _ := newTestApp(t)
 	layerJSON := `{"layers":[{"mediaType":"application/vnd.oci.image.layer.v1.tar+gzip","digest":"sha256:l1","size":1}]}`
 	view, err := newContentView(domain.Descriptor{MediaType: domain.MediaTypeOCIImageManifest, Digest: "sha256:m1"}, []byte(layerJSON))
@@ -132,9 +132,9 @@ func TestHelpTextHidesUnsupportedAction(t *testing.T) {
 	for range 2 { // line 2: the "{" of layers[0]
 		app.handleKey(keyPress(tcell.KeyDown))
 	}
-	helpText := app.helpText()
-	if strings.Contains(helpText, "Enter:") || !strings.Contains(helpText, "d:download") || !strings.Contains(helpText, "Esc/q:back") {
-		t.Errorf("on a layer, only d must be shown as an action and Esc/q as back: %q", helpText)
+	keyMapText := app.keyMapText()
+	if strings.Contains(keyMapText, "Enter:") || !strings.Contains(keyMapText, "d:download") || !strings.Contains(keyMapText, "Esc/q:back") {
+		t.Errorf("on a layer, only d must be shown as an action and Esc/q as back: %q", keyMapText)
 	}
 	app.handleKey(keyPress(tcell.KeyEnter))
 	if app.isBusy {
@@ -235,8 +235,8 @@ func TestSpaceFoldsAndUnfoldsObject(t *testing.T) {
 	for range 5 { // line 5: inside manifests[0]
 		app.handleKey(keyPress(tcell.KeyDown))
 	}
-	if !strings.Contains(app.helpText(), "Space:fold") {
-		t.Errorf("Space:fold must be shown inside an object: %q", app.helpText())
+	if !strings.Contains(app.keyMapText(), "Space:fold") {
+		t.Errorf("Space:fold must be shown inside an object: %q", app.keyMapText())
 	}
 	unfoldedLineCount := len(app.currentView().displayLines)
 
@@ -249,9 +249,9 @@ func TestSpaceFoldsAndUnfoldsObject(t *testing.T) {
 	if rowText := screenRowText(screen, 5); rowText != "    {...}" {
 		t.Errorf("folded row = %q", rowText)
 	}
-	helpText := app.helpText()
-	if !strings.Contains(helpText, "Space:unfold") || !strings.Contains(helpText, "Enter:view JSON") {
-		t.Errorf("on a folded selectable object, Space:unfold and its actions must be shown: %q", helpText)
+	keyMapText := app.keyMapText()
+	if !strings.Contains(keyMapText, "Space:unfold") || !strings.Contains(keyMapText, "Enter:view JSON") {
+		t.Errorf("on a folded selectable object, Space:unfold and its actions must be shown: %q", keyMapText)
 	}
 
 	app.handleKey(runePress(' '))
@@ -274,8 +274,8 @@ func TestCKeyCopiesCursorLineValue(t *testing.T) {
 	app, screen, _ := newTestApp(t)
 	app.handleKey(keyPress(tcell.KeyDown)) // line 1: "schemaVersion": 2
 	app.handleKey(keyPress(tcell.KeyDown)) // line 2: "mediaType": "..."
-	if !strings.Contains(app.helpText(), "c:copy") {
-		t.Errorf("c:copy must be shown on a value line: %q", app.helpText())
+	if !strings.Contains(app.keyMapText(), "c:copy") {
+		t.Errorf("c:copy must be shown on a value line: %q", app.keyMapText())
 	}
 	app.handleKey(runePress('c'))
 	if clipboard := string(screen.GetClipboardData()); clipboard != "application/vnd.oci.image.index.v1+json" {
@@ -287,8 +287,8 @@ func TestCKeyCopiesCursorLineValue(t *testing.T) {
 
 	app.handleKey(keyPress(tcell.KeyDown))
 	app.handleKey(keyPress(tcell.KeyDown)) // line 4: `{` of manifests[0]
-	if strings.Contains(app.helpText(), "c:copy") {
-		t.Errorf("c:copy must not be shown on an object line: %q", app.helpText())
+	if strings.Contains(app.keyMapText(), "c:copy") {
+		t.Errorf("c:copy must not be shown on an object line: %q", app.keyMapText())
 	}
 	app.handleKey(runePress('c'))
 	if clipboard := string(screen.GetClipboardData()); clipboard != "application/vnd.oci.image.index.v1+json" {
