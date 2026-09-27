@@ -17,7 +17,6 @@ type Dependencies struct {
 	DownloadContent *usecase.DownloadContent
 }
 
-// contentView is one screen of JSON. cursorLine and topLine are indexes into displayLines, which reflects folding.
 type contentView struct {
 	title               string
 	document            *jsonview.Document
@@ -69,13 +68,10 @@ func newContentView(descriptor domain.Descriptor, content []byte) (*contentView,
 	}, nil
 }
 
-// cursorDocumentLine returns the line in the document that the cursor is on (the start line for a folded object).
 func (view *contentView) cursorDocumentLine() int {
 	return view.displayLines[view.cursorLine].DocumentLine
 }
 
-// foldTarget returns the object that Space toggles and whether it is folded now.
-// On a folded line it is the folded object; otherwise it is the innermost object containing the cursor line.
 func (view *contentView) foldTarget() (objectIndex int, isFolded bool) {
 	displayLine := view.displayLines[view.cursorLine]
 	if displayLine.FoldedObjectIndex >= 0 {
@@ -84,7 +80,6 @@ func (view *contentView) foldTarget() (objectIndex int, isFolded bool) {
 	return view.document.Lines[displayLine.DocumentLine].ObjectIndex, false
 }
 
-// toggleFold folds or unfolds the object under the cursor and keeps the cursor on the object's first line.
 func (view *contentView) toggleFold() {
 	objectIndex, isFolded := view.foldTarget()
 	if objectIndex < 0 {
@@ -174,7 +169,6 @@ func (app *App) handleViewCommand(keyCommand command) (shouldQuit bool) {
 	return false
 }
 
-// copyCursorLineValue copies the string or number value on the cursor line to the system clipboard (OSC 52 via tcell).
 func (app *App) copyCursorLineValue() {
 	view := app.currentView()
 	value, ok := view.document.CopyableValueAt(view.cursorDocumentLine())
@@ -185,8 +179,6 @@ func (app *App) copyCursorLineValue() {
 	app.statusMessage = "Copied to clipboard"
 }
 
-// availableActions returns the selectable object under the cursor and the actions allowed for its mediaType.
-// It returns no actions when the cursor is not inside a selectable object.
 func (app *App) availableActions() (jsonview.SelectableObject, []domain.Action) {
 	view := app.currentView()
 	object, ok := view.document.SelectableObjectAt(view.cursorDocumentLine())
@@ -196,7 +188,6 @@ func (app *App) availableActions() (jsonview.SelectableObject, []domain.Action) 
 	return object, domain.ActionsFor(object.Descriptor.MediaType)
 }
 
-// executeOnSelectedObject runs the action on the object under the cursor, only if its mediaType allows the action.
 func (app *App) executeOnSelectedObject(action domain.Action) {
 	object, actions := app.availableActions()
 	if !slices.Contains(actions, action) {

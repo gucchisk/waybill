@@ -121,12 +121,10 @@ func (app *App) drawFooter(row, width int) {
 		app.drawText(0, row, app.statusMessage, tcell.StyleDefault.Bold(true), width)
 		return
 	}
-	app.drawText(0, row, app.helpText(), tcell.StyleDefault.Dim(true), width)
+	app.drawText(0, row, app.keyMapText(), tcell.StyleDefault.Dim(true), width)
 }
 
-// helpText lists only the keys that are usable right now.
-// The action keys are shown only when the cursor is inside an object whose mediaType allows the action.
-func (app *App) helpText() string {
+func (app *App) keyMapText() string {
 	_, actions := app.availableActions()
 	keyHelps := []string{"↑↓/C-p C-n:move", "PgUp PgDn/M-v C-v:page"}
 	if objectIndex, isFolded := app.currentView().foldTarget(); objectIndex >= 0 {

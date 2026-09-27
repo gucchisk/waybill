@@ -14,12 +14,10 @@ import (
 	"github.com/gucchisk/waybill/internal/domain"
 )
 
-// RegclientRepository fetches content from a registry using regclient.
 type RegclientRepository struct {
 	client *regclient.RegClient
 }
 
-// NewRegclientRepository creates a client that uses Docker's credential and certificate settings.
 func NewRegclientRepository() *RegclientRepository {
 	return &RegclientRepository{
 		client: regclient.New(regclient.WithDockerCreds(), regclient.WithDockerCerts()),
@@ -73,7 +71,6 @@ func (repository *RegclientRepository) FetchContent(ctx context.Context, reposit
 	return blob, nil
 }
 
-// repositoryName returns "registry/path" without the tag or digest.
 func repositoryName(imageRef ref.Ref) string {
 	return imageRef.Registry + "/" + imageRef.Repository
 }

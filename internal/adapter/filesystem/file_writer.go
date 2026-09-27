@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 )
 
-// FileWriter saves files under the given directory.
 type FileWriter struct {
 	directory string
 }
@@ -16,7 +15,6 @@ func NewFileWriter(directory string) *FileWriter {
 	return &FileWriter{directory: directory}
 }
 
-// SaveFile writes to a temporary file and then renames it, so a failure never leaves a partial file.
 func (writer *FileWriter) SaveFile(fileName string, content io.Reader) (string, error) {
 	savedPath := filepath.Join(writer.directory, filepath.Base(fileName))
 
