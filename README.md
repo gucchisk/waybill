@@ -6,6 +6,7 @@ You can interactively walk from an image index → manifest → config / layer /
 
 ## Features
 
+- Shows a two-line header: the image name given as the argument (fixed even while viewing child JSON) and the mediaType and digest of the current JSON
 - Shows pretty-printed, colorized JSON line by line
 - Highlights the whole cursor line by swapping the terminal's foreground and background colors (white on gray on light backgrounds), like a row selection in a list
 - Highlights (with a subtler background color, chosen for dark or light terminal backgrounds) the innermost object under the cursor that has both `mediaType` and `digest`

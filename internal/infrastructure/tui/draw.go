@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -50,9 +51,14 @@ var spanStyles = map[jsonview.SpanKind]tcell.Style{
 	jsonview.SpanLiteral:     tcell.StyleDefault.Foreground(tcell.ColorPurple),
 }
 
+// headerHeight is the number of rows of the header: the image reference given as the argument on the first row and the mediaType and digest of the current JSON on the second.
+const headerHeight = 2
+
+const footerHeight = 1
+
 func (app *App) bodyHeight() int {
 	_, height := app.screen.Size()
-	return max(height-2, 1)
+	return max(height-headerHeight-footerHeight, 1)
 }
 
 func (app *App) draw() {
@@ -62,8 +68,7 @@ func (app *App) draw() {
 	view := app.currentView()
 	app.keepCursorVisible(view)
 
-	headerStyle := tcell.StyleDefault.Bold(true)
-	app.drawText(0, 0, view.title, headerStyle, width)
+	app.drawHeader(view, width)
 	app.drawBody(view, width)
 	app.drawFooter(height-1, width)
 	app.screen.Show()
@@ -88,7 +93,7 @@ func (app *App) drawBody(view *contentView, width int) {
 			return
 		}
 		displayLine := view.displayLines[displayLineNumber]
-		screenRow := row + 1
+		screenRow := headerHeight + row
 		isCursorLine := displayLineNumber == view.cursorLine
 		isSelected := hasSelectedObject && displayLine.DocumentLine >= selectedObject.StartLine && displayLine.DocumentLine <= selectedObject.EndLine
 
@@ -114,6 +119,12 @@ func (app *App) drawBody(view *contentView, width int) {
 			x = app.drawText(x, screenRow, span.Text, style, width)
 		}
 	}
+}
+
+func (app *App) drawHeader(view *contentView, width int) {
+	headerStyle := tcell.StyleDefault.Bold(true)
+	app.drawText(0, 0, app.imageReference, headerStyle, width)
+	app.drawText(0, 1, fmt.Sprintf("%s  %s", view.mediaType, view.digest), headerStyle, width)
 }
 
 func (app *App) drawFooter(row, width int) {

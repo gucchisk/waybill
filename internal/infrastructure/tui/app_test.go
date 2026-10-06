@@ -40,7 +40,7 @@ func newTestApp(t *testing.T) (*App, tcell.SimulationScreen, *discardSaver) {
 
 	fetcher := staticFetcher{"sha256:m1": `{"schemaVersion":2,"layers":[]}`}
 	saver := &discardSaver{}
-	app, err := NewApp(context.Background(), screen, true, "example.com/repo",
+	app, err := NewApp(context.Background(), screen, true, "example.com/repo:latest", "example.com/repo",
 		domain.Descriptor{MediaType: domain.MediaTypeOCIImageIndex, Digest: "sha256:root"}, []byte(indexJSON),
 		Dependencies{ViewContent: usecase.NewViewContent(fetcher), DownloadContent: usecase.NewDownloadContent(fetcher, saver)})
 	if err != nil {
@@ -154,16 +154,16 @@ func TestSelectedObjectHasBackground(t *testing.T) {
 		_, background, attributes := style.Decompose()
 		return background, attributes&tcell.AttrReverse != 0
 	}
-	if _, isReversed := styleAt(5); !isReversed {
+	if _, isReversed := styleAt(6); !isReversed {
 		t.Error("the cursor line must be drawn in reverse video")
 	}
-	for screenRow := 6; screenRow <= 9; screenRow++ {
+	for screenRow := 7; screenRow <= 10; screenRow++ {
 		background, isReversed := styleAt(screenRow)
 		if background != app.selectedBackgroundColor || isReversed {
 			t.Errorf("screen row %d must have the selected background and no reverse", screenRow)
 		}
 	}
-	for _, screenRow := range []int{3, 10} {
+	for _, screenRow := range []int{4, 11} {
 		background, isReversed := styleAt(screenRow)
 		if background == app.selectedBackgroundColor || isReversed {
 			t.Errorf("screen row %d is outside the selected object and must have no highlight", screenRow)
@@ -190,16 +190,48 @@ func TestCursorLineStyleIsNotPureBlackOnLightBackground(t *testing.T) {
 	}
 }
 
+func TestHeaderShowsImageReferenceAndMediaTypeWithDigestOnSeparateRows(t *testing.T) {
+	app, screen, _ := newTestApp(t)
+	app.draw()
+
+	if rowText := screenRowText(screen, 0); rowText != "example.com/repo:latest" {
+		t.Errorf("header row 0 = %q, want the image reference", rowText)
+	}
+	if rowText := screenRowText(screen, 1); rowText != string(domain.MediaTypeOCIImageIndex)+"  sha256:root" {
+		t.Errorf("header row 1 = %q, want the mediaType and digest", rowText)
+	}
+	if rowText := screenRowText(screen, 2); rowText != "{" {
+		t.Errorf("body must start on row 2: %q", rowText)
+	}
+}
+
+func TestHeaderKeepsImageReferenceOnChildView(t *testing.T) {
+	app, screen, _ := newTestApp(t)
+	view, err := newContentView(domain.Descriptor{MediaType: domain.MediaTypeOCIImageManifest, Digest: "sha256:m1"}, []byte(`{"schemaVersion":2,"layers":[]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.views = append(app.views, view)
+	app.draw()
+
+	if rowText := screenRowText(screen, 0); rowText != "example.com/repo:latest" {
+		t.Errorf("header row 0 = %q, want the image reference even on a child view", rowText)
+	}
+	if rowText := screenRowText(screen, 1); rowText != string(domain.MediaTypeOCIImageManifest)+"  sha256:m1" {
+		t.Errorf("header row 1 = %q, want the mediaType and digest of the child view", rowText)
+	}
+}
+
 func TestCursorLineIsHighlightedEvenWithoutSelectableObject(t *testing.T) {
 	app, screen, _ := newTestApp(t)
 	app.draw()
 
-	_, style, _ := screen.Get(10, 1)
+	_, style, _ := screen.Get(10, 2)
 	_, _, attributes := style.Decompose()
 	if attributes&tcell.AttrReverse == 0 {
 		t.Error("the cursor line must be drawn in reverse video")
 	}
-	if text, _, _ := screen.Get(0, 1); text == ">" {
+	if text, _, _ := screen.Get(0, 2); text == ">" {
 		t.Error("the \">\" cursor marker must not be drawn")
 	}
 }
@@ -246,7 +278,7 @@ func TestSpaceFoldsAndUnfoldsObject(t *testing.T) {
 		t.Fatalf("cursorLine=%d displayLines=%d, want the cursor on the folded line", view.cursorLine, len(view.displayLines))
 	}
 	app.draw()
-	if rowText := screenRowText(screen, 5); rowText != "    {...}" {
+	if rowText := screenRowText(screen, 6); rowText != "    {...}" {
 		t.Errorf("folded row = %q", rowText)
 	}
 	keyMapText := app.keyMapText()
