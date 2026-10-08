@@ -18,7 +18,8 @@ type Dependencies struct {
 }
 
 type contentView struct {
-	title               string
+	mediaType           domain.MediaType
+	digest              string
 	document            *jsonview.Document
 	foldedObjectIndexes map[int]bool
 	displayLines        []jsonview.DisplayLine
@@ -27,10 +28,11 @@ type contentView struct {
 }
 
 type App struct {
-	screen       tcell.Screen
-	ctx          context.Context
-	repository   string
-	dependencies Dependencies
+	screen         tcell.Screen
+	ctx            context.Context
+	imageReference string
+	repository     string
+	dependencies   Dependencies
 
 	cursorLineStyle         tcell.Style
 	selectedBackgroundColor tcell.Color
@@ -40,9 +42,9 @@ type App struct {
 	isBusy        bool
 }
 
-func NewApp(ctx context.Context, screen tcell.Screen, hasDarkBackground bool, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies) (*App, error) {
+func NewApp(ctx context.Context, screen tcell.Screen, hasDarkBackground bool, imageReference string, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies) (*App, error) {
 	app := &App{
-		ctx: ctx, screen: screen, repository: repository, dependencies: dependencies,
+		ctx: ctx, screen: screen, imageReference: imageReference, repository: repository, dependencies: dependencies,
 		cursorLineStyle:         cursorLineStyleFor(hasDarkBackground),
 		selectedBackgroundColor: selectedBackgroundColorFor(hasDarkBackground),
 	}
@@ -61,7 +63,8 @@ func newContentView(descriptor domain.Descriptor, content []byte) (*contentView,
 	}
 	foldedObjectIndexes := map[int]bool{}
 	return &contentView{
-		title:               fmt.Sprintf("%s  %s", descriptor.MediaType, descriptor.Digest),
+		mediaType:           descriptor.MediaType,
+		digest:              descriptor.Digest,
 		document:            document,
 		foldedObjectIndexes: foldedObjectIndexes,
 		displayLines:        document.DisplayLines(foldedObjectIndexes),
@@ -242,7 +245,7 @@ func (app *App) runAction(descriptor domain.Descriptor, action domain.Action) fu
 	return fail(fmt.Errorf("unsupported action %d", action))
 }
 
-func Run(ctx context.Context, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies, theme Theme) error {
+func Run(ctx context.Context, imageReference string, repository string, rootDescriptor domain.Descriptor, rootContent []byte, dependencies Dependencies, theme Theme) error {
 	hasDarkBackground := theme.hasDarkBackground()
 
 	screen, err := tcell.NewScreen()
@@ -254,7 +257,7 @@ func Run(ctx context.Context, repository string, rootDescriptor domain.Descripto
 	}
 	defer screen.Fini()
 
-	app, err := NewApp(ctx, screen, hasDarkBackground, repository, rootDescriptor, rootContent, dependencies)
+	app, err := NewApp(ctx, screen, hasDarkBackground, imageReference, repository, rootDescriptor, rootContent, dependencies)
 	if err != nil {
 		return err
 	}

@@ -83,7 +83,7 @@ func run(parentCtx context.Context, imageReference string, theme tui.Theme) erro
 		return err
 	}
 
-	return tui.Run(ctx, repository, rootDescriptor, rootContent, tui.Dependencies{
+	return tui.Run(ctx, imageReference, repository, rootDescriptor, rootContent, tui.Dependencies{
 		ViewContent:     viewContent,
 		DownloadContent: downloadContent,
 	}, theme)
